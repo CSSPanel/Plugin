@@ -36,10 +36,18 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 	internal static ILogger? _logger;
 
 	public static MemoryFunctionVoid<CBasePlayerController, CCSPlayerPawn, bool, bool>? CBasePlayerController_SetPawnFunc = null;
-	public override string ModuleName => "CS2-SimpleAdmin";
+	public override string ModuleName => "CSS-Panel";
 	public override string ModuleDescription => "Simple admin plugin for Counter-Strike 2 :)";
 	public override string ModuleAuthor => "daffyy & Dliix66";
 	public override string ModuleVersion => "1.3.2b";
+
+	private static readonly HttpClient _httpClient = new HttpClient();
+	private static readonly HttpClient httpClient = new HttpClient();
+
+	static private Dictionary<int, bool> BteamChat = new Dictionary<int, bool>();
+
+	static string firstMessage = "";
+	static string secondMessage = "";
 
 	public CS2_SimpleAdminConfig Config { get; set; } = new();
 
@@ -62,7 +70,7 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 	{
 		if (config.DatabaseHost.Length < 1 || config.DatabaseName.Length < 1 || config.DatabaseUser.Length < 1)
 		{
-			throw new Exception("[CS2-SimpleAdmin] You need to setup Database credentials in config!");
+			throw new Exception("[CSS-Panel] You need to setup Database credentials in config!");
 		}
 
 		MySqlConnectionStringBuilder builder = new MySqlConnectionStringBuilder

@@ -45,6 +45,20 @@ CREATE TABLE IF NOT EXISTS `sa_servers` (
 						 `id` int(11) NOT NULL AUTO_INCREMENT,
 						 `address` varchar(64) NOT NULL,
 						 `hostname` varchar(64) NOT NULL,
+						 `rcon` varchar(64) NULL,
 						 PRIMARY KEY (`id`),
 						 UNIQUE KEY `address` (`address`)
+						) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `sa_servers` ADD COLUMN IF NOT EXISTS `rcon` VARCHAR(64) NULL;
+
+CREATE TABLE IF NOT EXISTS `sa_chatlogs` (
+						 `id` int(11) NOT NULL AUTO_INCREMENT,
+						 `serverId` varchar(64) NOT NULL,
+						 `playerSteam64` varchar(64) NOT NULL,
+						 `playerName` varchar(64) NOT NULL,
+						 `message` TEXT,
+						 `team` BOOLEAN NOT NULL,
+						 `created` timestamp NOT NULL,
+						 PRIMARY KEY (`id`)
 						) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

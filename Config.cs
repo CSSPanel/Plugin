@@ -12,9 +12,24 @@ namespace CS2_SimpleAdmin
 		public string DiscordPenaltyWebhook { get; set; } = "";
 	}
 
+	public class ChatLog
+	{
+		[JsonPropertyName("ChatLog_Enable")]
+		public bool ChatLog_Enable { get; set; } = true;
+
+		[JsonPropertyName("ChatLog_ExcludeMessageContains")]
+		public string ExcludeMessageContains { get; set; } = "!./";
+
+		[JsonPropertyName("ChatLog_ExcludeMessageContainsLessThanXLetters")]
+		public int ExcludeMessageContainsLessThanXLetters { get; set; } = 0;
+
+		[JsonPropertyName("ChatLog_ExcludeMessageDuplicate")]
+		public bool ExcludeMessageDuplicate { get; set; } = false;
+	}
+
 	public class CS2_SimpleAdminConfig : BasePluginConfig
 	{
-		public override int Version { get; set; } = 6;
+		public override int Version { get; set; } = 7;
 
 		[JsonPropertyName("DatabaseHost")]
 		public string DatabaseHost { get; set; } = "";
@@ -54,5 +69,15 @@ namespace CS2_SimpleAdmin
 
 		[JsonPropertyName("WorkshopMaps")]
 		public List<string> WorkshopMaps { get; set; } = new List<string>();
+
+		// CS-Panel
+		[JsonPropertyName("DefaultServerIP")]
+		public string DefaultServerIP { get; set; } = "";
+
+		[JsonPropertyName("PanelURL")]
+		public string PanelURL { get; set; } = "";
+
+		[JsonPropertyName("ChatLog")]
+		public ChatLog ChatLog { get; set; } = new ChatLog();
 	}
 }

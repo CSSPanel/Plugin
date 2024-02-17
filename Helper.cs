@@ -146,7 +146,7 @@ namespace CS2_SimpleAdmin
 		public static IEnumerable<Embed> GenerateEmbedsDiscord(string title, string description, string thumbnailUrl, Color color, string[] fieldNames, string[] fieldValues, bool[] inlineFlags)
 		{
 			string? hostname = ConVar.Find("hostname")!.StringValue ?? "Unknown";
-			string? address = $"{ConVar.Find("ip")!.StringValue}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
+			string? address = $"{(Config?.DefaultServerIP != "" ? Config?.DefaultServerIP : ConVar.Find("ip")!.StringValue)}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
 
 			description = description.Replace("{hostname}", hostname ?? "Unknown");
 			description = description.Replace("{address}", address ?? "Unknown");
@@ -178,7 +178,7 @@ namespace CS2_SimpleAdmin
 		public static string GenerateMessageDiscord(string message)
 		{
 			string? hostname = ConVar.Find("hostname")!.StringValue ?? "Unknown";
-			string? address = $"{ConVar.Find("ip")!.StringValue}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
+			string? address = $"{(Config?.DefaultServerIP != "" ? Config?.DefaultServerIP : ConVar.Find("ip")!.StringValue)}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
 
 			message = message.Replace("HOSTNAME", hostname);
 			message = message.Replace("ADDRESS", address);
@@ -207,6 +207,11 @@ namespace CS2_SimpleAdmin
 		private static byte[] GetStringBytes(string str)
 		{
 			return Encoding.ASCII.GetBytes(str);
+		}
+
+		public static string GetSteamProfileLink(string userId)
+		{
+			return $"https://steamcommunity.com/profiles/{userId}";
 		}
 	}
 }
