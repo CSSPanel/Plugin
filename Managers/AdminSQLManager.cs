@@ -55,7 +55,8 @@ namespace CS2_SimpleAdmin
 
 			await using var connection = await _database.GetConnectionAsync();
 
-			string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR server_id = @serverid)";
+			// string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR server_id = @serverid)";
+			string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND FIND_IN_SET(@serverid, server_id)";
 			List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { PlayerSteamID = steamId, CurrentTime = now, serverid = CS2_SimpleAdmin.ServerId }))?.ToList();
 
 			if (activeFlags == null)
@@ -97,7 +98,22 @@ namespace CS2_SimpleAdmin
 					continue;
 				}
 
-				//Console.WriteLine($"Flags: {flagsValue}, Immunity: {immunityValue}");
+				Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}, Immunity: {immunityValue}");
+
+				// If flags start with '#', fetch flags and immunity from sa_admins_groups
+				if (flagsValue.StartsWith("#"))
+				{
+					string groupSql = "SELECT flags, immunity FROM sa_admins_groups WHERE id = @GroupId";
+					var group = await connection.QueryFirstOrDefaultAsync(groupSql, new { GroupId = flagsValue });
+
+					if (group != null)
+					{
+						flagsValue = group.flags;
+						immunityValue = group.immunity;
+					}
+				}
+
+				Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}, Immunity: {immunityValue}");
 
 				filteredFlagsWithImmunity.Add((flagsValue.Split(',').ToList(), immunityValue));
 			}
@@ -154,7 +170,8 @@ namespace CS2_SimpleAdmin
 			{
 				await using var connection = await _database.GetConnectionAsync();
 
-				string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR server_id = @serverid)";
+				// string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR server_id = @serverid)";
+				string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND FIND_IN_SET(@serverid, server_id)";
 				List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { CurrentTime = now, serverid = CS2_SimpleAdmin.ServerId }))?.ToList();
 
 				if (activeFlags == null)
@@ -176,7 +193,7 @@ namespace CS2_SimpleAdmin
 						!flagsDict.TryGetValue("immunity", out var immunityValueObj) ||
 						!flagsDict.TryGetValue("ends", out var endsObj))
 					{
-						//Console.WriteLine("One or more required keys are missing.");
+						Console.WriteLine("One or more required keys are missing.");
 						continue;
 					}
 
@@ -201,13 +218,40 @@ namespace CS2_SimpleAdmin
 						continue;
 					}
 
+					// Console.WriteLine($"Flags Check: flagsValue {flagsValue}");
+
+					if (flagsValue.StartsWith("#"))
+					{
+						string groupSql = "SELECT flags, immunity FROM sa_admins_groups WHERE id = @GroupId";
+						var group = await connection.QueryFirstOrDefaultAsync(groupSql, new { GroupId = flagsValue });
+
+						if (group != null)
+						{
+							flagsValue = group.flags;
+							if (int.TryParse(group.immunity.ToString(), out int immunityGroupValue))
+							{
+								filteredFlagsWithImmunity.Add((steamId, flagsValue.Split(',').ToList(), immunityGroupValue, ends));
+								// Console.WriteLine($"Flags Check (Group): SteamId {steamId} Flags: {flagsValue}, Immunity: {immunityValue}");
+
+								continue;
+							}
+							else
+							{
+								Console.WriteLine($"Failed to parse immunity: {group.immunity}");
+							}
+						}
+					}
+
+					// Console.WriteLine($"Flags Check: SteamId {steamId} Flags: {flagsValue}, Immunity: {immunityValue}");
+
 					filteredFlagsWithImmunity.Add((steamId, flagsValue.Split(',').ToList(), immunityValue, ends));
 				}
 
 				return filteredFlagsWithImmunity;
 			}
-			catch (Exception)
+			catch (Exception e)
 			{
+				Console.WriteLine($"Error: {e.Message}");
 				return new List<(string, List<string>, int, DateTime?)>();
 			}
 		}
@@ -255,7 +299,8 @@ namespace CS2_SimpleAdmin
 			}
 			else
 			{
-				sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND server_id = @ServerId";
+				// sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND server_id = @ServerId";
+				sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND FIND_IN_SET(@ServerId, server_id)";
 			}
 
 			await connection.ExecuteAsync(sql, new { PlayerSteamID = playerSteamId, ServerId = CS2_SimpleAdmin.ServerId });

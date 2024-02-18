@@ -41,6 +41,15 @@ CREATE TABLE IF NOT EXISTS `sa_admins` (
 						 PRIMARY KEY (`id`)
 						) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE IF NOT EXISTS `sa_admins_groups` (
+						 `id` VARCHAR(50) NOT NULL,
+						 `name` TEXT NOT NULL,
+						 `flags` TEXT NOT NULL,
+						 `immunity` varchar(64) NOT NULL DEFAULT '0',
+						 `created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+						 PRIMARY KEY (`id`)
+						) ENGINE = InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE IF NOT EXISTS `sa_servers` (
 						 `id` int(11) NOT NULL AUTO_INCREMENT,
 						 `address` varchar(64) NOT NULL,
@@ -51,6 +60,8 @@ CREATE TABLE IF NOT EXISTS `sa_servers` (
 						) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 ALTER TABLE `sa_servers` ADD COLUMN IF NOT EXISTS `rcon` VARCHAR(64) NULL;
+ALTER TABLE `sa_servers` ADD COLUMN IF NOT EXISTS `rcon` VARCHAR(64) NULL;
+ALTER TABLE `sa_admins` CHANGE `server_id` `server_id` VARCHAR(50) NULL DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS `sa_chatlogs` (
 						 `id` int(11) NOT NULL AUTO_INCREMENT,
