@@ -28,6 +28,8 @@ namespace CS2_SimpleAdmin
 				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
 			}
 
+			Helper.LogCommand(caller, command);
+
 			byte[] utf8BytesString = Encoding.UTF8.GetBytes(command.GetCommandString[command.GetCommandString.IndexOf(' ')..]);
 			string utf8String = Encoding.UTF8.GetString(utf8BytesString);
 
@@ -59,6 +61,8 @@ namespace CS2_SimpleAdmin
 				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
 			}
 
+			Helper.LogCommand(caller, command);
+
 			foreach (CCSPlayerController _player in Helper.GetValidPlayers())
 			{
 				using (new WithTemporaryCulture(_player.GetLanguage()))
@@ -78,6 +82,8 @@ namespace CS2_SimpleAdmin
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.SteamID.ToString().Length == 17 && !player.IsHLTV).ToList();
+
+			Helper.LogCommand(caller, command);
 
 			int range = command.GetArg(0).Length + command.GetArg(1).Length + 2;
 			string message = command.GetCommandString[range..];
@@ -108,6 +114,8 @@ namespace CS2_SimpleAdmin
 				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
 			}
 
+			Helper.LogCommand(caller, command);
+
 			Helper.PrintToCenterAll(Helper.ReplaceTags(utf8String));
 		}
 
@@ -125,6 +133,8 @@ namespace CS2_SimpleAdmin
 				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
 				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
 			}
+
+			Helper.LogCommand(caller, command);
 
 			VirtualFunctions.ClientPrintAll(
 				HudDestination.Alert,
