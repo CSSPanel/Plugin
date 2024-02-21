@@ -138,7 +138,7 @@ namespace CS2_SimpleAdmin
 					// roundsWon = player.RoundsWon,
 					mvps = player.MVPs,
 					// time, // ? Fix this, it's not the time the player has been connected
-					avatar = player.AuthorizedSteamID != null ? await GetProfilePictureAsync(player.AuthorizedSteamID.SteamId64.ToString(), true) : ""
+					// avatar = player.AuthorizedSteamID != null ? await GetProfilePictureAsync(player.AuthorizedSteamID.SteamId64.ToString(), true) : ""
 				};
 				return (object)user;
 			}).ToList();
