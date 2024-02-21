@@ -241,6 +241,8 @@ public partial class CS2_SimpleAdmin
 		godPlayers.Clear();
 		silentPlayers.Clear();
 
+		_logger?.LogInformation("Map started");
+
 		PlayerPenaltyManager playerPenaltyManager = new PlayerPenaltyManager();
 		playerPenaltyManager.RemoveAllPenalties();
 
@@ -301,8 +303,10 @@ public partial class CS2_SimpleAdmin
 			TagsDetected = true;
 		}
 
+		_logger?.LogInformation("AddTimer");
 		AddTimer(3.0f, async () =>
 		{
+			_logger?.LogInformation("Start checking server_id");
 			string? address = $"{(Config.DefaultServerIP != "" ? Config.DefaultServerIP : ConVar.Find("ip")!.StringValue)}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
 			string? hostname = ConVar.Find("hostname")!.StringValue;
 			string? rcon = ConVar.Find("rcon_password")!.StringValue;
@@ -341,7 +345,7 @@ public partial class CS2_SimpleAdmin
 					int? serverId = await connection.ExecuteScalarAsync<int>(
 						"SELECT `id` FROM `sa_servers` WHERE `address` = @address",
 						new { address });
-					
+
 					if (serverId == null)
 					{
 						_logger?.LogCritical("Unable to get server_id");
