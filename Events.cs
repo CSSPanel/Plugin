@@ -307,6 +307,10 @@ public partial class CS2_SimpleAdmin
 			string? hostname = ConVar.Find("hostname")!.StringValue;
 			string? rcon = ConVar.Find("rcon_password")!.StringValue;
 
+			_logger?.LogInformation("Server Address: " + address);
+			_logger?.LogInformation("Server Hostname: " + hostname);
+			_logger?.LogInformation("Server Rcon: " + rcon);
+
 			await Task.Run(async () =>
 			{
 				AdminSQLManager _adminManager = new(_database);
@@ -317,14 +321,18 @@ public partial class CS2_SimpleAdmin
 						"SELECT COUNT(*) FROM sa_servers WHERE address = @address",
 						new { address });
 
+					_logger?.LogInformation("Server address exists: " + addressExists);
+
 					if (!addressExists)
 					{
+						_logger?.LogInformation("Server address does not exist, creating new entry");
 						await connection.ExecuteAsync(
 							"INSERT INTO sa_servers (address, hostname, rcon) VALUES (@address, @hostname, @rcon)",
 							new { address, hostname, rcon });
 					}
 					else
 					{
+						_logger?.LogInformation("Server address exists, updating entry");
 						await connection.ExecuteAsync(
 							"UPDATE `sa_servers` SET hostname = @hostname, rcon = @rcon WHERE address = @address",
 							new { address, rcon, hostname });
@@ -333,6 +341,14 @@ public partial class CS2_SimpleAdmin
 					int? serverId = await connection.ExecuteScalarAsync<int>(
 						"SELECT `id` FROM `sa_servers` WHERE `address` = @address",
 						new { address });
+					
+					if (serverId == null)
+					{
+						_logger?.LogCritical("Unable to get server_id");
+						return;
+					}
+
+					_logger?.LogInformation("Server Id: " + serverId);
 
 					ServerId = serverId;
 
