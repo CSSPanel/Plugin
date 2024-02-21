@@ -39,7 +39,7 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 	public override string ModuleName => "CSS-Panel";
 	public override string ModuleDescription => "Simple admin plugin for Counter-Strike 2 :)";
 	public override string ModuleAuthor => "daffyy & Dliix66";
-	public override string ModuleVersion => "1.3.3b";
+	public override string ModuleVersion => "1.3.4";
 
 	private static readonly HttpClient _httpClient = new HttpClient();
 	private static readonly HttpClient httpClient = new HttpClient();
