@@ -121,23 +121,23 @@ namespace CS2_SimpleAdmin
 					userId = player.UserId,
 					playerName = player.PlayerName,
 					ipAddress = player.IpAddress?.Split(":")[0],
-					accountId = player.AuthorizedSteamID?.AccountId.ToString(),
-					steamId2 = player.AuthorizedSteamID?.SteamId2,
-					steamId3 = player.AuthorizedSteamID?.SteamId3,
+					// accountId = player.AuthorizedSteamID?.AccountId.ToString(),
+					// steamId2 = player.AuthorizedSteamID?.SteamId2,
+					// steamId3 = player.AuthorizedSteamID?.SteamId3,
 					steam64 = player.AuthorizedSteamID?.SteamId64.ToString(),
 					ping = player.Ping,
 					team = player.Team,
-					clanName = player.ClanName,
+					// clanName = player.ClanName,
 					kills,
 					deaths,
-					assists,
-					headshots,
-					damage,
+					// assists,
+					// headshots,
+					// damage,
 					score = player.Score,
-					roundScore = player.RoundScore,
-					roundsWon = player.RoundsWon,
+					// roundScore = player.RoundScore,
+					// roundsWon = player.RoundsWon,
 					mvps = player.MVPs,
-					time, // ? Fix this, it's not the time the player has been connected
+					// time, // ? Fix this, it's not the time the player has been connected
 					avatar = player.AuthorizedSteamID != null ? await GetProfilePictureAsync(player.AuthorizedSteamID.SteamId64.ToString(), true) : ""
 				};
 				return (object)user;

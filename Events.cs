@@ -346,12 +346,6 @@ public partial class CS2_SimpleAdmin
 						"SELECT `id` FROM `sa_servers` WHERE `address` = @address",
 						new { address });
 
-					if (serverId == null)
-					{
-						_logger?.LogCritical("Unable to get server_id");
-						return;
-					}
-
 					_logger?.LogInformation("Server Id: " + serverId);
 
 					ServerId = serverId;
