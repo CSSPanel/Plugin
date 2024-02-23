@@ -300,7 +300,7 @@ namespace CS2_SimpleAdmin
 			else
 			{
 				// sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND server_id = @ServerId";
-				sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
+				sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND FIND_IN_SET(@ServerId, server_id)";
 			}
 
 			await connection.ExecuteAsync(sql, new { PlayerSteamID = playerSteamId, ServerId = CS2_SimpleAdmin.ServerId });
