@@ -56,7 +56,7 @@ namespace CS2_SimpleAdmin
 			await using var connection = await _database.GetConnectionAsync();
 
 			// string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR server_id = @serverid)";
-			string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND FIND_IN_SET(@serverid, server_id)";
+			string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
 			List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { PlayerSteamID = steamId, CurrentTime = now, serverid = CS2_SimpleAdmin.ServerId }))?.ToList();
 
 			if (activeFlags == null)
@@ -171,7 +171,7 @@ namespace CS2_SimpleAdmin
 				await using var connection = await _database.GetConnectionAsync();
 
 				// string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR server_id = @serverid)";
-				string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND FIND_IN_SET(@serverid, server_id)";
+				string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
 				List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { CurrentTime = now, serverid = CS2_SimpleAdmin.ServerId }))?.ToList();
 
 				if (activeFlags == null)
@@ -300,7 +300,7 @@ namespace CS2_SimpleAdmin
 			else
 			{
 				// sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND server_id = @ServerId";
-				sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND FIND_IN_SET(@ServerId, server_id)";
+				sql = "DELETE FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
 			}
 
 			await connection.ExecuteAsync(sql, new { PlayerSteamID = playerSteamId, ServerId = CS2_SimpleAdmin.ServerId });
