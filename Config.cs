@@ -29,7 +29,7 @@ namespace CS2_SimpleAdmin
 
 	public class CS2_SimpleAdminConfig : BasePluginConfig
 	{
-		public override int Version { get; set; } = 7;
+		[JsonPropertyName("ConfigVersion")] public override int Version { get; set; } = 7;
 
 		[JsonPropertyName("DatabaseHost")]
 		public string DatabaseHost { get; set; } = "";
@@ -57,6 +57,9 @@ namespace CS2_SimpleAdmin
 
 		[JsonPropertyName("BanType")]
 		public int BanType { get; set; } = 1;
+
+		[JsonPropertyName("ExpireOldIpBans")]
+		public int ExpireOldIpBans { get; set; } = 0;
 
 		[JsonPropertyName("TeamSwitchType")]
 		public int TeamSwitchType { get; set; } = 1;

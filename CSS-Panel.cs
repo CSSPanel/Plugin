@@ -12,7 +12,7 @@ using System.Collections.Concurrent;
 
 namespace CS2_SimpleAdmin;
 
-[MinimumApiVersion(168)]
+[MinimumApiVersion(178)]
 public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdminConfig>
 {
 	public static CS2_SimpleAdmin Instance { get; private set; } = new();
@@ -39,7 +39,7 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 	public override string ModuleName => "CSS-Panel";
 	public override string ModuleDescription => "Simple admin plugin for Counter-Strike 2 :)";
 	public override string ModuleAuthor => "daffyy & Dliix66";
-	public override string ModuleVersion => "1.3.4";
+	public override string ModuleVersion => "1.3.4a";
 
 	private static readonly HttpClient _httpClient = new HttpClient();
 	private static readonly HttpClient httpClient = new HttpClient();
@@ -55,7 +55,7 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 	{
 		Instance = this;
 
-		registerEvents();
+		RegisterEvents();
 
 		if (hotReload)
 		{
@@ -110,9 +110,9 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 					}
 				}
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
-				Logger.LogError("Unable to connect to the database!");
+				Logger.LogError($"Unable to connect to the database: {ex.Message}");
 				throw;
 			}
 		});

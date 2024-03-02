@@ -93,10 +93,10 @@ namespace CS2_SimpleAdmin
 
 			playersToTarget.ForEach(player =>
 			{
-				player.PrintToChat(Helper.ReplaceTags($"({caller!.PlayerName}) {utf8String}"));
+				player.PrintToChat(StringExtensions.ReplaceColorTags($"({caller!.PlayerName}) {utf8String}"));
 			});
 
-			command.ReplyToCommand(Helper.ReplaceTags($" Private message sent!"));
+			command.ReplyToCommand(StringExtensions.ReplaceColorTags($" Private message sent!"));
 		}
 
 		[ConsoleCommand("css_csay", "Say to all players (in center).")]
@@ -116,7 +116,7 @@ namespace CS2_SimpleAdmin
 
 			Helper.LogCommand(caller, command);
 
-			Helper.PrintToCenterAll(Helper.ReplaceTags(utf8String));
+			Helper.PrintToCenterAll(StringExtensions.ReplaceColorTags(utf8String));
 		}
 
 		[ConsoleCommand("css_hsay", "Say to all players (in hud).")]
@@ -138,7 +138,7 @@ namespace CS2_SimpleAdmin
 
 			VirtualFunctions.ClientPrintAll(
 				HudDestination.Alert,
-				Helper.ReplaceTags(utf8String),
+				StringExtensions.ReplaceColorTags(utf8String),
 				0, 0, 0, 0);
 		}
 	}

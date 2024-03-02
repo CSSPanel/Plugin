@@ -1,6 +1,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using Microsoft.Extensions.Logging;
@@ -69,7 +70,7 @@ namespace CS2_SimpleAdmin
 
 			foreach (CCSPlayerController player in Utilities.GetPlayers().Where(p => p != null && p.IsValid && p.Connected == PlayerConnectedState.PlayerConnected && !p.IsBot && !p.IsHLTV))
 			{
-				player.PrintToChat(Helper.ReplaceTags(utf8String));
+				player.PrintToChat(StringExtensions.ReplaceColorTags(utf8String));
 			}
 		}
 
@@ -108,7 +109,7 @@ namespace CS2_SimpleAdmin
 
 			List<Task<object>> playerTasks = playersToTarget
 			.FindAll(player => !player.IsBot && !player.IsHLTV && player.PlayerName != "")
-			.Select(async player =>
+			.Select(player =>
 			{
 				string deaths = player.ActionTrackingServices!.MatchStats.Deaths.ToString();
 				string headshots = player.ActionTrackingServices!.MatchStats.HeadShotKills.ToString();
@@ -140,7 +141,7 @@ namespace CS2_SimpleAdmin
 					// time, // ? Fix this, it's not the time the player has been connected
 					// avatar = player.AuthorizedSteamID != null ? await GetProfilePictureAsync(player.AuthorizedSteamID.SteamId64.ToString(), true) : ""
 				};
-				return (object)user;
+				return Task.FromResult((object)user);
 			}).ToList();
 
 			List<object> players = new List<object>();
