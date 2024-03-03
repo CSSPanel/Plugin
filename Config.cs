@@ -27,6 +27,16 @@ namespace CS2_SimpleAdmin
 		public bool ExcludeMessageDuplicate { get; set; } = false;
 	}
 
+	public class CustomServerCommandData
+	{
+		[JsonPropertyName("Flag")]
+		public string Flag { get; set; } = "@css/generic";
+		[JsonPropertyName("DisplayName")]
+		public string DisplayName { get; set; } = "";
+		[JsonPropertyName("Command")]
+		public string Command { get; set; } = "";
+	}
+
 	public class CS2_SimpleAdminConfig : BasePluginConfig
 	{
 		[JsonPropertyName("ConfigVersion")] public override int Version { get; set; } = 8;
@@ -72,6 +82,9 @@ namespace CS2_SimpleAdmin
 
 		[JsonPropertyName("WorkshopMaps")]
 		public List<string> WorkshopMaps { get; set; } = new List<string>();
+
+		[JsonPropertyName("CustomServerCommands")]
+		public List<CustomServerCommandData> CustomServerCommands { get; set; } = new List<CustomServerCommandData>();
 
 		// CS-Panel
 		[JsonPropertyName("DefaultServerIP")]

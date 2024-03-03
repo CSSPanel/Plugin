@@ -118,6 +118,7 @@ public partial class CS2_SimpleAdmin : BasePlugin, IPluginConfig<CS2_SimpleAdmin
 		});
 
 		Config = config;
+		Helper.UpdateConfig(config);
 		_localizer = Localizer;
 
 		if (!string.IsNullOrEmpty(Config.Discord.DiscordLogWebhook))
