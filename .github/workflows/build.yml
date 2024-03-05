@@ -69,4 +69,4 @@ jobs:
           body: |
             Place the plugin in game/csgo/addons/counterstrikesharp/plugins/CSS-Panel
             After first launch, u need to configure plugin in  addons/counterstrikesharp/configs/plugins/CSS-Panel/CSS-Panel.json
-            Get the latest version of the panel here - github.com/ShiNxz/CSS-Panel
+            Get the latest version of the panel here - github.com/CSSPanel/Panel

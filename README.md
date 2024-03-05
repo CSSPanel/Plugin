@@ -65,7 +65,7 @@ The plugin is forked and based on [daffyyyy/CS2-SimpleAdmin](https://github.com/
 
 - [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/) **tested on v178**
 - MySQL **tested on MySQL (MariaDB) Server version: 10.11.4-MariaDB-1~deb12u1 Debian 12**
-- [CSS-Panel](https://github.com/ShiNxz/CSS-Panel)
+- [CSS-Panel](https://github.com/CSSPanel/Panel)
 
 ### Configuration
 
