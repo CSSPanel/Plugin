@@ -335,6 +335,26 @@ namespace CS2_SimpleAdmin
 			});
 		}
 
+		[ConsoleCommand("css_fexec")]
+		[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+		[RequiresPermissions("@css/root")]
+		public void OnFexecCommand(CCSPlayerController? caller, CommandInfo command)
+		{
+			TargetResult? targets = GetTarget(command);
+			if (targets == null) return;
+
+			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.SteamID.ToString().Length == 17 && !player.IsHLTV).ToList();
+
+			playersToTarget.ForEach(player =>
+			{
+				if (caller!.CanTarget(player))
+				{
+					Helper.LogCommand(caller, command);
+					player.ExecuteClientCommand(command.GetArg(1));
+				}
+			});
+		}
+
 		[ConsoleCommand("css_players")]
 		[CommandHelper(whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
 		[RequiresPermissions("@css/generic")]
