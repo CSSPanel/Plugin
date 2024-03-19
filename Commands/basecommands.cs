@@ -336,21 +336,35 @@ namespace CS2_SimpleAdmin
 		}
 
 		[ConsoleCommand("css_fexec")]
-		[CommandHelper(minArgs: 1, usage: "<#userid or name>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
+		[CommandHelper(minArgs: 2, usage: "<#userid or name or steamid> <command>", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
 		[RequiresPermissions("@css/root")]
 		public void OnFexecCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			TargetResult? targets = GetTarget(command);
-			if (targets == null) return;
+			var target = command.GetArg(1);
+			var exec = command.GetArg(2);
 
-			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.SteamID.ToString().Length == 17 && !player.IsHLTV).ToList();
+			List<CCSPlayerController> playersToTarget = Helper.GetValidPlayers();
+
+			// Find the player by name, userid or steamid
+			if (target.StartsWith("#"))
+			{
+				playersToTarget = playersToTarget.Where(player => player.UserId.ToString() == target.Replace("#", "")).ToList();
+			}
+			else if (Helper.IsValidSteamID64(target))
+			{
+				playersToTarget = playersToTarget.Where(player => player.SteamID.ToString() == target).ToList();
+			}
+			else
+			{
+				playersToTarget = playersToTarget.Where(player => player.PlayerName.ToLower().Contains(target.ToLower())).ToList();
+			}
 
 			playersToTarget.ForEach(player =>
 			{
 				if (caller!.CanTarget(player))
 				{
 					Helper.LogCommand(caller, command);
-					player.ExecuteClientCommand(command.GetArg(1));
+					player.ExecuteClientCommand(exec);
 				}
 			});
 		}
