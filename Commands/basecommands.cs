@@ -364,7 +364,8 @@ namespace CS2_SimpleAdmin
 				if (caller!.CanTarget(player))
 				{
 					Helper.LogCommand(caller, command);
-					player.ExecuteClientCommand(exec);
+					// player.ExecuteClientCommand(exec);
+					player.ExecuteClientCommandFromServer(exec);
 				}
 			});
 		}
