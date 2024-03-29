@@ -37,8 +37,8 @@ public partial class CSSPanel : BasePlugin, IPluginConfig<CSSPanelConfig>
 	public static MemoryFunctionVoid<CBasePlayerController, CCSPlayerPawn, bool, bool>? CBasePlayerController_SetPawnFunc = null;
 	public override string ModuleName => "CSS-Panel";
 	public override string ModuleDescription => "Simple admin plugin for Counter-Strike 2 :)";
-	public override string ModuleAuthor => "daffyy & Dliix66";
-	public override string ModuleVersion => "1.3.6d";
+	public override string ModuleAuthor => "daffyy & Dliix66 & ShiNxz";
+	public override string ModuleVersion => "1.4.0";
 
 	private static readonly HttpClient httpClient = new HttpClient();
 

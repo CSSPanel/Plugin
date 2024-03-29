@@ -96,11 +96,6 @@ internal class BanManager
 			return false;
 		}
 
-#if DEBUG
-		if (CSSPanel._logger!= null)
-			CSSPanel._logger.LogCritical($"IsPlayerBanned for {player.Name}");
-#endif
-
 		int banCount = 0;
 
 		DateTime currentTime = DateTime.Now.ToLocalTime();

@@ -27,6 +27,12 @@ namespace CSSPanel
 		public bool ExcludeMessageDuplicate { get; set; } = false;
 	}
 
+	public class Statistics
+	{
+		[JsonPropertyName("Statistics_Enable")]
+		public bool Statistics_Enable { get; set; } = true;
+	}
+
 	public class CustomServerCommandData
 	{
 		[JsonPropertyName("Flag")]
@@ -96,5 +102,8 @@ namespace CSSPanel
 
 		[JsonPropertyName("ChatLog")]
 		public ChatLog ChatLog { get; set; } = new ChatLog();
+		
+		[JsonPropertyName("Statistics")]
+		public Statistics Statistics { get; set; } = new Statistics();
 	}
 }

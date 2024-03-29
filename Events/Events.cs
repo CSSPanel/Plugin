@@ -22,6 +22,9 @@ public partial class CSSPanel
 		RegisterListener<Listeners.OnMapStart>(OnMapStart);
 		//RegisterListener<Listeners.OnClientConnected>(OnClientConnected); // stats
 		//RegisterListener<Listeners.OnClientDisconnect>(OnClientDisconnect); // stats -> change the seconds amount to the calculated time
+		//RegisterListener<Listeners.OnClien>(OnPlayerFullConnect);
+
+		// Gag and Mute checks
 		AddCommandListener("say", OnCommandSay);
 		AddCommandListener("say_team", OnCommandTeamSay);
 
@@ -44,10 +47,6 @@ public partial class CSSPanel
 	{
 		CCSPlayerController? player = @event.Userid;
 
-#if DEBUG
-		Logger.LogCritical("[OnClientDisconnect] Before");
-#endif
-
 		if (player == null || !player.IsValid || string.IsNullOrEmpty(player.IpAddress) || player.IsBot || player.IsHLTV)
 		{
 			return HookResult.Continue;
@@ -58,9 +57,6 @@ public partial class CSSPanel
 			return HookResult.Continue;
 		}
 
-#if DEBUG
-		Logger.LogCritical("[OnClientDisconnect] After Check");
-#endif
 		try
 		{
 			PlayerPenaltyManager playerPenaltyManager = new PlayerPenaltyManager();
@@ -216,10 +212,6 @@ public partial class CSSPanel
 	[GameEventHandler]
 	public HookResult OnRoundEnd(EventRoundStart @event, GameEventInfo info)
 	{
-#if DEBUG
-		Logger.LogCritical("[OnRoundEnd]");
-#endif
-
 		godPlayers.Clear();
 		return HookResult.Continue;
 	}
@@ -299,11 +291,6 @@ public partial class CSSPanel
 
 		AddTimer(61.0f, () =>
 		{
-
-#if DEBUG
-			Logger.LogCritical("[OnMapStart] Expired check");
-#endif
-
 			Task.Run(async () =>
 			{
 				AdminSQLManager _adminManager = new AdminSQLManager(_database);
@@ -423,128 +410,6 @@ public partial class CSSPanel
 			if (botQuota != null && botQuota.GetPrimitiveValue<int>() > 0)
 			{
 				Logger.LogWarning("Due to bugs with bots (game bug), consider disabling bots by setting `bot_quota 0` in the gamemode config if your server crashes after a map change.");
-			}
-		});
-	}
-
-	private HookResult OnPlayerSayPublic(CCSPlayerController? player, CommandInfo info)
-	{
-		if (Config.ChatLog.ChatLog_Enable == false) return HookResult.Continue;
-		if (player == null || !player.IsValid || player.IsBot || player.IsHLTV) return HookResult.Continue;
-
-		bool isTeamChat = false;
-		if (player.UserId.HasValue)
-		{
-			BteamChat[player.UserId.Value] = false;
-			isTeamChat = BteamChat[player.UserId.Value];
-		}
-
-		var message = info.GetArg(1);
-
-		if (message.StartsWith('/')) return HookResult.Continue;
-
-		if (string.IsNullOrWhiteSpace(message)) return HookResult.Continue;
-		string trimmedMessage1 = message.TrimStart();
-		string trimmedMessage = trimmedMessage1.TrimEnd();
-
-		if (!string.IsNullOrEmpty(Config.ChatLog.ExcludeMessageContains) && IsStringValid(trimmedMessage)) return HookResult.Continue;
-		if (Config.ChatLog.ExcludeMessageContainsLessThanXLetters > 0 && CountLetters(trimmedMessage) <= Config.ChatLog.ExcludeMessageContainsLessThanXLetters)
-		{
-			return HookResult.Continue;
-		}
-
-		var vplayername = player.PlayerName;
-		var steamId64 = (player.AuthorizedSteamID != null) ? player.AuthorizedSteamID.SteamId64.ToString() : "InvalidSteamID";
-
-		secondMessage = firstMessage;
-		firstMessage = trimmedMessage;
-
-		if (Config.ChatLog.ExcludeMessageDuplicate && secondMessage == firstMessage) return HookResult.Continue;
-
-		// Add to db
-		AddChatMessageDB(
-			steamId64,
-			vplayername,
-			trimmedMessage,
-			isTeamChat
-		);
-
-		return HookResult.Continue;
-	}
-
-	private HookResult OnPlayerSayTeam(CCSPlayerController? player, CommandInfo info)
-	{
-		if (Config.ChatLog.ChatLog_Enable == false) return HookResult.Continue;
-		if (player == null || !player.IsValid || player.IsBot || player.IsHLTV) return HookResult.Continue;
-
-		bool isTeamChat = true;
-		if (player.UserId.HasValue)
-		{
-			BteamChat[player.UserId.Value] = true;
-			isTeamChat = BteamChat[player.UserId.Value];
-		}
-
-		var message = info.GetArg(1);
-
-		if (message.StartsWith('/')) return HookResult.Continue;
-
-		if (string.IsNullOrWhiteSpace(message)) return HookResult.Continue;
-		string trimmedMessage1 = message.TrimStart();
-		string trimmedMessage = trimmedMessage1.TrimEnd();
-
-		if (!string.IsNullOrEmpty(Config.ChatLog.ExcludeMessageContains) && IsStringValid(trimmedMessage)) return HookResult.Continue;
-		if (Config.ChatLog.ExcludeMessageContainsLessThanXLetters > 0 && CountLetters(trimmedMessage) <= Config.ChatLog.ExcludeMessageContainsLessThanXLetters)
-		{
-			return HookResult.Continue;
-		}
-
-		var vplayername = player.PlayerName;
-		var steamId64 = (player.AuthorizedSteamID != null) ? player.AuthorizedSteamID.SteamId64.ToString() : "InvalidSteamID";
-
-		secondMessage = firstMessage;
-		firstMessage = trimmedMessage;
-
-		if (Config.ChatLog.ExcludeMessageDuplicate && secondMessage == firstMessage) return HookResult.Continue;
-
-		// Add to db
-		AddChatMessageDB(
-			steamId64,
-			vplayername,
-			trimmedMessage,
-			isTeamChat
-		);
-
-		return HookResult.Continue;
-	}
-
-	public void AddChatMessageDB(string playerSteam64, string playerName, string message, bool? team)
-	{
-		Task.Run(async () =>
-		{
-			try
-			{
-				if (_database == null)
-					return;
-				await using var connection = await _database.GetConnectionAsync();
-				var sql = "INSERT INTO `sa_chatlogs` (`playerSteam64`, `playerName`, `message`, `team`, `created`, `serverId`) " +
-					"VALUES (@playerSteam64, @playerName, @message, @team, @created, @serverId)";
-				int? serverId = ServerId;
-				if (serverId == null)
-					return;
-				DateTime now = DateTime.Now;
-				await connection.ExecuteAsync(sql, new
-				{
-					playerSteam64,
-					playerName,
-					message,
-					team = team ?? null,
-					created = now,
-					serverid = serverId
-				});
-			}
-			catch (Exception e)
-			{
-				Logger.LogError(e.Message);
 			}
 		});
 	}

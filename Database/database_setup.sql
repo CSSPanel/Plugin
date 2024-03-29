@@ -76,3 +76,21 @@ CREATE TABLE IF NOT EXISTS `sa_chatlogs` (
 						 `created` timestamp NOT NULL,
 						 PRIMARY KEY (`id`)
 						) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `sa_statistics` (
+							`id` INT(11) NOT NULL AUTO_INCREMENT,
+							`serverId` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci',
+							`playerId` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci',
+							`playerName` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci',
+							`playerIP` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci',
+							`connectDate` timestamp DEFAULT CURRENT_TIMESTAMP,
+							`connectTime` INT(20) NOT NULL,
+							`disconnectDate` timestamp NULL DEFAULT NULL,
+							`disconnectTime` INT(20) NULL DEFAULT NULL,
+							`duration` INT(20) NULL DEFAULT NULL,
+							`kills` INT(10) NULL DEFAULT NULL,
+							`flags` TEXT NOT NULL COLLATE 'utf8mb4_general_ci',
+							`map` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci',
+							PRIMARY KEY (`id`) USING BTREE,
+							INDEX `playerId` (`playerId`) USING BTREE
+						) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

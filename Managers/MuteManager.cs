@@ -84,11 +84,6 @@ internal class MuteManager
 			return new List<dynamic>();
 		}
 
-#if DEBUG
-		if (CSSPanel._logger!= null)
-			CSSPanel._logger.LogCritical($"IsPlayerMuted for {steamId}");
-#endif
-
 		try
 		{
 			await using var connection = await _database.GetConnectionAsync();
