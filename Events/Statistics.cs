@@ -50,9 +50,7 @@ public partial class CSSPanel
 					"VALUES (@serverId, @playerId, @playerName, @playerIP, @connectTime, @flags, @map)";
 
 				List<(List<string>, int)> admin = await _adminManager.GetAdminFlags(playerId);
-				Logger.LogCritical($"Admin: {string.Join("; ", admin.Select(a => $"({string.Join(", ", a.Item1)}, {a.Item2})"))}");
 				List<string> joinedFlags = admin.Select(tuple => string.Join(",", tuple.Item1)).ToList();
-				Logger.LogCritical($"joinedFlags: {string.Join(", ", joinedFlags)}");
 
 				await connection.ExecuteAsync(sql, new
 				{

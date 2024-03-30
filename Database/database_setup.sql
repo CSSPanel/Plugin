@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS `sa_statistics` (
 							`disconnectTime` INT(20) NULL DEFAULT NULL,
 							`duration` INT(20) NULL DEFAULT NULL,
 							`kills` INT(10) NULL DEFAULT NULL,
-							`flags` TEXT NOT NULL COLLATE 'utf8mb4_general_ci',
+							`flags` TEXT COLLATE 'utf8mb4_general_ci',
 							`map` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci',
 							PRIMARY KEY (`id`) USING BTREE,
 							INDEX `playerId` (`playerId`) USING BTREE
