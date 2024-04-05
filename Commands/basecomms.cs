@@ -1,11 +1,10 @@
-﻿using CounterStrikeSharp.API;
+﻿﻿using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Commands.Targeting;
-using CounterStrikeSharp.API.Modules.Entities;
 using System.Text;
 
 namespace CSSPanel
@@ -21,7 +20,7 @@ namespace CSSPanel
 			string callerName = caller == null ? "Console" : caller.PlayerName;
 
 			int time = 0;
-			string reason = CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
+			string reason = _localizer?["sa_unknown"] ?? "Unknown";
 
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
@@ -30,12 +29,6 @@ namespace CSSPanel
 			if (playersToTarget.Count > 1 && Config.DisableDangerousCommands || playersToTarget.Count == 0)
 			{
 				return;
-			}
-
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
 			}
 
 			int.TryParse(command.GetArg(2), out time);
@@ -50,12 +43,12 @@ namespace CSSPanel
 			{
 				if (caller!.CanTarget(player))
 				{
-					Gag(caller, player, time, reason, callerName, _muteManager, playerPenaltyManager);
+					Gag(caller, player, time, reason, callerName, _muteManager, playerPenaltyManager, command);
 				}
 			});
 		}
 
-		internal void Gag(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, PlayerPenaltyManager? playerPenaltyManager = null)
+		internal void Gag(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, PlayerPenaltyManager? playerPenaltyManager = null, CommandInfo? command = null)
 		{
 			if (_database == null) return;
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
@@ -76,8 +69,6 @@ namespace CSSPanel
 				IpAddress = caller?.IpAddress?.Split(":")[0]
 			};
 
-			Helper.LogCommand(caller, $"css_gag {player?.SteamID} {time} {reason}");
-
 			Task.Run(async () =>
 			{
 				await muteManager.MutePlayer(playerInfo, adminInfo, reason, time);
@@ -87,7 +78,6 @@ namespace CSSPanel
 				Server.ExecuteCommand($"css_tag_mute {player!.SteamID}");
 
 			playerPenaltyManager.AddPenalty(player!.Slot, PenaltyType.Gag, DateTime.Now.AddMinutes(time), time);
-
 			if (time == 0)
 			{
 				if (!player!.IsBot && !player.IsHLTV)
@@ -134,6 +124,13 @@ namespace CSSPanel
 					}
 				}
 			}
+
+			if (command != null)
+			{
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				Helper.SendDiscordPenaltyMessage(caller, player, reason, time, Helper.PenaltyType.Gag, _discordWebhookClientPenalty, _localizer);
+				Helper.LogCommand(caller, command);
+			}
 		}
 
 		[ConsoleCommand("css_addgag")]
@@ -157,14 +154,8 @@ namespace CSSPanel
 				return;
 			}
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			int time = 0;
-			string reason = CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
+			string reason = _localizer?["sa_unknown"] ?? "Unknown";
 
 			MuteManager _muteManager = new(_database);
 			PlayerPenaltyManager playerPenaltyManager = new PlayerPenaltyManager();
@@ -180,8 +171,6 @@ namespace CSSPanel
 				Name = caller?.PlayerName,
 				IpAddress = caller?.IpAddress?.Split(":")[0]
 			};
-
-			Helper.LogCommand(caller, command);
 
 			List<CCSPlayerController> matches = Helper.GetPlayerFromSteamid64(steamid);
 			if (matches.Count == 1)
@@ -243,6 +232,8 @@ namespace CSSPanel
 
 					playerPenaltyManager.AddPenalty(player!.Slot, PenaltyType.Gag, DateTime.Now.AddMinutes(time), time);
 				}
+
+				Helper.SendDiscordPenaltyMessage(caller, player, reason, time, Helper.PenaltyType.Gag, _discordWebhookClientPenalty, _localizer);
 			}
 
 			Task.Run(async () =>
@@ -250,7 +241,13 @@ namespace CSSPanel
 				await _muteManager.AddMuteBySteamid(steamid, adminInfo, reason, time, 0);
 			});
 
-			command.ReplyToCommand($"Gagged player with steamid {steamid}.");
+			if (command != null)
+			{
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				Helper.LogCommand(caller, command);
+			}
+
+			command?.ReplyToCommand($"Gagged player with steamid {steamid}.");
 		}
 
 		[ConsoleCommand("css_ungag")]
@@ -269,12 +266,7 @@ namespace CSSPanel
 				return;
 			}
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
+			Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 			Helper.LogCommand(caller, command);
 
 			bool found = false;
@@ -376,7 +368,7 @@ namespace CSSPanel
 			string callerName = caller == null ? "Console" : caller.PlayerName;
 
 			int time = 0;
-			string reason = CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
+			string reason = _localizer?["sa_unknown"] ?? "Unknown";
 
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
@@ -385,12 +377,6 @@ namespace CSSPanel
 			if (playersToTarget.Count > 1 && Config.DisableDangerousCommands || playersToTarget.Count == 0)
 			{
 				return;
-			}
-
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
 			}
 
 			int.TryParse(command.GetArg(2), out time);
@@ -405,12 +391,12 @@ namespace CSSPanel
 			{
 				if (caller!.CanTarget(player))
 				{
-					Mute(caller, player, time, reason, callerName, _muteManager, playerPenaltyManager);
+					Mute(caller, player, time, reason, callerName, _muteManager, playerPenaltyManager, command);
 				}
 			});
 		}
 
-		internal void Mute(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, PlayerPenaltyManager? playerPenaltyManager = null)
+		internal void Mute(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, PlayerPenaltyManager? playerPenaltyManager = null, CommandInfo? command = null)
 		{
 			if (_database == null) return;
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
@@ -430,8 +416,6 @@ namespace CSSPanel
 				Name = caller?.PlayerName,
 				IpAddress = caller?.IpAddress?.Split(":")[0]
 			};
-
-			Helper.LogCommand(caller, $"css_mute {player?.SteamID} {time} {reason}");
 
 			player!.VoiceFlags = VoiceFlags.Muted;
 
@@ -483,6 +467,13 @@ namespace CSSPanel
 					}
 				}
 			}
+
+			if (command != null)
+			{
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				Helper.SendDiscordPenaltyMessage(caller, player, reason, time, Helper.PenaltyType.Mute, _discordWebhookClientPenalty, _localizer);
+				Helper.LogCommand(caller, command);
+			}
 		}
 
 		[ConsoleCommand("css_addmute")]
@@ -505,16 +496,8 @@ namespace CSSPanel
 				return;
 			}
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
-			Helper.LogCommand(caller, command);
-
 			int time = 0;
-			string reason = CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
+			string reason = _localizer?["sa_unknown"] ?? "Unknown";
 
 			MuteManager _muteManager = new(_database);
 			PlayerPenaltyManager playerPenaltyManager = new PlayerPenaltyManager();
@@ -586,6 +569,8 @@ namespace CSSPanel
 						}
 					}
 				}
+
+				Helper.SendDiscordPenaltyMessage(caller, player, reason, time, Helper.PenaltyType.Mute, _discordWebhookClientPenalty, _localizer);
 			}
 
 			Task.Run(async () =>
@@ -593,7 +578,13 @@ namespace CSSPanel
 				await _muteManager.AddMuteBySteamid(steamid, adminInfo, reason, time, 1);
 			});
 
-			command.ReplyToCommand($"Muted player with steamid {steamid}.");
+			if (command != null)
+			{
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				Helper.LogCommand(caller, command);
+			}
+
+			command?.ReplyToCommand($"Muted player with steamid {steamid}.");
 		}
 
 		[ConsoleCommand("css_unmute")]
@@ -612,12 +603,7 @@ namespace CSSPanel
 				return;
 			}
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
+			Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 			Helper.LogCommand(caller, command);
 
 			string pattern = command.GetArg(1);
@@ -716,12 +702,6 @@ namespace CSSPanel
 				return;
 			}
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			int.TryParse(command.GetArg(2), out time);
 
 			if (command.ArgCount >= 3 && command.GetArg(3).Length > 0)
@@ -734,12 +714,12 @@ namespace CSSPanel
 			{
 				if (caller!.CanTarget(player))
 				{
-					Silence(caller, player, time, reason, callerName, _muteManager, playerPenaltyManager);
+					Silence(caller, player, time, reason, callerName, _muteManager, playerPenaltyManager, command);
 				}
 			});
 		}
 
-		internal void Silence(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, PlayerPenaltyManager? playerPenaltyManager = null)
+		internal void Silence(CCSPlayerController? caller, CCSPlayerController player, int time, string reason, string? callerName = null, MuteManager? muteManager = null, PlayerPenaltyManager? playerPenaltyManager = null, CommandInfo? command = null)
 		{
 			if (_database == null) return;
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
@@ -760,8 +740,6 @@ namespace CSSPanel
 				IpAddress = caller?.IpAddress?.Split(":")[0]
 			};
 
-			Helper.LogCommand(caller, $"css_silence {player?.SteamID} {time} {reason}");
-
 			Task.Run(async () =>
 			{
 				await muteManager.MutePlayer(playerInfo, adminInfo, reason, time, 2);
@@ -771,7 +749,6 @@ namespace CSSPanel
 				Server.ExecuteCommand($"css_tag_mute {player!.SteamID}");
 
 			player!.VoiceFlags = VoiceFlags.Muted;
-
 			playerPenaltyManager.AddPenalty(player!.Slot, PenaltyType.Silence, DateTime.Now.AddMinutes(time), time);
 
 			if (time == 0)
@@ -820,6 +797,13 @@ namespace CSSPanel
 					}
 				}
 			}
+
+			if (command != null)
+			{
+				Helper.SendDiscordPenaltyMessage(caller, player, reason, time, Helper.PenaltyType.Mute, _discordWebhookClientPenalty, _localizer);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				Helper.LogCommand(caller, command);
+			}
 		}
 
 		[ConsoleCommand("css_addsilence")]
@@ -841,14 +825,6 @@ namespace CSSPanel
 				command.ReplyToCommand($"Invalid SteamID64.");
 				return;
 			}
-
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
-			Helper.LogCommand(caller, command);
 
 			int time = 0;
 			string reason = CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
@@ -925,6 +901,8 @@ namespace CSSPanel
 							}
 						}
 					}
+
+					Helper.SendDiscordPenaltyMessage(caller, player, reason, time, Helper.PenaltyType.Mute, _discordWebhookClientPenalty, _localizer);
 				}
 			}
 			Task.Run(async () =>
@@ -932,7 +910,13 @@ namespace CSSPanel
 				await _muteManager.AddMuteBySteamid(steamid, adminInfo, reason, time, 2);
 			});
 
-			command.ReplyToCommand($"Silenced player with steamid {steamid}.");
+			if (command != null)
+			{
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				Helper.LogCommand(caller, command);
+			}
+
+			command?.ReplyToCommand($"Silenced player with steamid {steamid}.");
 		}
 
 		[ConsoleCommand("css_unsilence")]
@@ -951,12 +935,7 @@ namespace CSSPanel
 				return;
 			}
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
+			Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 			Helper.LogCommand(caller, command);
 
 			string pattern = command.GetArg(1);

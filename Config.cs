@@ -43,6 +43,9 @@ namespace CSSPanel
 
 		[JsonPropertyName("Command")]
 		public string Command { get; set; } = "";
+
+		[JsonPropertyName("ExecuteOnClient")]
+		public bool ExecuteOnClient { get; set; } = false;
 	}
 
 	public class CSSPanelConfig : BasePluginConfig

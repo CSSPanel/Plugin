@@ -1,4 +1,3 @@
-using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Menu;
@@ -34,19 +33,6 @@ namespace CSSPanel.Menus
 			}
 
 			options.Add(new ChatMenuOptionData("Restart Game", () => CSSPanel.RestartGame(admin)));
-
-			List<CustomServerCommandData> customCommands = CSSPanel.Instance.Config.CustomServerCommands;
-			foreach (CustomServerCommandData customCommand in customCommands)
-			{
-				if (string.IsNullOrEmpty(customCommand.DisplayName) || string.IsNullOrEmpty(customCommand.Command))
-					continue;
-
-				bool hasRights = AdminManager.PlayerHasPermissions(admin, customCommand.Flag);
-				if (!hasRights)
-					continue;
-
-				options.Add(new ChatMenuOptionData(customCommand.DisplayName, () => Server.ExecuteCommand(customCommand.Command)));
-			}
 
 			foreach (ChatMenuOptionData menuOptionData in options)
 			{

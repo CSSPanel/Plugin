@@ -45,6 +45,12 @@ namespace CSSPanel.Menus
 				new ChatMenuOptionData("Fun actions", () => FunActionsMenu.OpenMenu(admin)),
 			};
 
+			List<CustomServerCommandData> customCommands = CSSPanel.Instance.Config.CustomServerCommands;
+			if (customCommands.Count > 0)
+			{
+				options.Add(new ChatMenuOptionData("Custom Commands", () => CustomCommandsMenu.OpenMenu(admin)));
+			}
+
 			if (AdminManager.PlayerHasPermissions(admin, "@css/root"))
 				options.Add(new ChatMenuOptionData("Manage Admins", () => ManageAdminsMenu.OpenMenu(admin)));
 

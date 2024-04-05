@@ -1,10 +1,9 @@
-﻿using CounterStrikeSharp.API.Core;
+﻿﻿using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Core.Translations;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Commands.Targeting;
-using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Utils;
@@ -23,21 +22,15 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
 			playersToTarget.ForEach(player =>
 			{
-				Slay(caller, player, callerName);
+				Slay(caller, player, callerName, command);
 			});
 		}
 
-		public void Slay(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null)
+		public void Slay(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
 		{
 			if (!player.IsBot && player.SteamID.ToString().Length != 17)
 				return;
@@ -46,7 +39,11 @@ namespace CSSPanel
 
 			player.CommitSuicide(false, true);
 
-			Helper.LogCommand(caller, $"css_slay {player.PlayerName}");
+			if (command != null)
+			{
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				Helper.LogCommand(caller, command);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -98,18 +95,12 @@ namespace CSSPanel
 				}
 			}
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			playersToTarget.ForEach(player =>
 			{
 				if (!player.IsBot && player.SteamID.ToString().Length != 17)
 					return;
 
-				GiveWeapon(caller, player, weaponName, callerName);
+				GiveWeapon(caller, player, weaponName, callerName, command);
 			});
 		}
 
@@ -121,9 +112,13 @@ namespace CSSPanel
 			SubGiveWeapon(caller, player!, weapon.ToString(), callerName);
 		}
 
-		public void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, string weaponName, string? callerName = null)
+		public void GiveWeapon(CCSPlayerController? caller, CCSPlayerController player, string weaponName, string? callerName = null, CommandInfo? command = null)
 		{
-			Helper.LogCommand(caller, $"css_give {player?.PlayerName} {weaponName}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			player?.GiveNamedItem(weaponName);
 			SubGiveWeapon(caller, player!, weaponName, callerName);
@@ -156,24 +151,18 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
 			playersToTarget.ForEach(player =>
 			{
 				if (caller!.CanTarget(player))
 				{
-					StripWeapons(caller, player, callerName);
+					StripWeapons(caller, player, callerName, command);
 				}
 			});
 		}
 
-		public void StripWeapons(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null)
+		public void StripWeapons(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
 		{
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
 
@@ -182,7 +171,11 @@ namespace CSSPanel
 
 			player.RemoveWeapons();
 
-			Helper.LogCommand(caller, $"css_strip {player.PlayerName}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -210,24 +203,18 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
 			playersToTarget.ForEach(player =>
 			{
 				if (caller!.CanTarget(player))
 				{
-					SetHp(caller, player, health, callerName);
+					SetHp(caller, player, health, callerName, command);
 				}
 			});
 		}
 
-		public void SetHp(CCSPlayerController? caller, CCSPlayerController player, int health, string? callerName = null)
+		public void SetHp(CCSPlayerController? caller, CCSPlayerController player, int health, string? callerName = null, CommandInfo? command = null)
 		{
 			if (!player.IsBot && player.SteamID.ToString().Length != 17)
 				return;
@@ -236,7 +223,11 @@ namespace CSSPanel
 
 			player.SetHp(health);
 
-			Helper.LogCommand(caller, $"css_hp {player.PlayerName} {health}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -264,12 +255,6 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
 			playersToTarget.ForEach(player =>
@@ -279,18 +264,22 @@ namespace CSSPanel
 
 				if (caller!.CanTarget(player))
 				{
-					SetSpeed(caller, player, speed, callerName);
+					SetSpeed(caller, player, speed, callerName, command);
 				}
 			});
 		}
 
-		public void SetSpeed(CCSPlayerController? caller, CCSPlayerController player, double speed, string? callerName = null)
+		public void SetSpeed(CCSPlayerController? caller, CCSPlayerController player, double speed, string? callerName = null, CommandInfo? command = null)
 		{
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
 
 			player.SetSpeed((float)speed);
 
-			Helper.LogCommand(caller, $"css_speed {player?.PlayerName} {speed}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -318,11 +307,7 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
+			Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
@@ -333,18 +318,22 @@ namespace CSSPanel
 
 				if (caller!.CanTarget(player))
 				{
-					SetGravity(caller, player, gravity, callerName);
+					SetGravity(caller, player, gravity, callerName, command);
 				}
 			});
 		}
 
-		public void SetGravity(CCSPlayerController? caller, CCSPlayerController player, double gravity, string? callerName = null)
+		public void SetGravity(CCSPlayerController? caller, CCSPlayerController player, double gravity, string? callerName = null, CommandInfo? command = null)
 		{
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
 
 			player.SetGravity((float)gravity);
 
-			Helper.LogCommand(caller, $"css_gravity {player?.PlayerName} {gravity}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -372,12 +361,6 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
 			playersToTarget.ForEach(player =>
@@ -387,18 +370,22 @@ namespace CSSPanel
 
 				if (caller!.CanTarget(player))
 				{
-					SetMoney(caller, player, money, callerName);
+					SetMoney(caller, player, money, callerName, command);
 				}
 			});
 		}
 
-		public void SetMoney(CCSPlayerController? caller, CCSPlayerController player, int money, string? callerName = null)
+		public void SetMoney(CCSPlayerController? caller, CCSPlayerController player, int money, string? callerName = null, CommandInfo? command = null)
 		{
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
 
 			player.SetMoney(money);
 
-			Helper.LogCommand(caller, $"css_money {player?.PlayerName} {money}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -423,12 +410,6 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
 			playersToTarget.ForEach(player =>
@@ -438,18 +419,22 @@ namespace CSSPanel
 
 				if (caller!.CanTarget(player))
 				{
-					God(caller, player, callerName);
+					God(caller, player, callerName, command);
 				}
 			});
 		}
 
-		public void God(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null)
+		public void God(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
 		{
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
 
 			if (player != null)
 			{
-				Helper.LogCommand(caller, $"css_god {player.PlayerName}");
+				if (command != null)
+				{
+					Helper.LogCommand(caller, command);
+					Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+				}
 
 				if (!godPlayers.Contains(player.Slot))
 				{
@@ -486,12 +471,6 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && player.PawnIsAlive && !player.IsHLTV).ToList();
 
 			if (command.ArgCount >= 2)
@@ -506,17 +485,21 @@ namespace CSSPanel
 
 				if (caller!.CanTarget(player))
 				{
-					Slap(caller, player, damage);
+					Slap(caller, player, damage, command);
 				}
 			});
 		}
 
-		public void Slap(CCSPlayerController? caller, CCSPlayerController player, int damage, string? callerName = null)
+		public void Slap(CCSPlayerController? caller, CCSPlayerController player, int damage, CommandInfo? command = null)
 		{
-			callerName ??= caller == null ? "Console" : caller.PlayerName;
+			string callerName = caller == null ? "Console" : caller.PlayerName;
 			player!.Pawn.Value!.Slap(damage);
 
-			Helper.LogCommand(caller, $"css_slap {player.PlayerName} {damage}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -544,12 +527,6 @@ namespace CSSPanel
 
 			TargetResult? targets = GetTarget(command);
 			if (targets == null) return;
-
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
 
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && !player.IsHLTV).ToList();
 
@@ -580,15 +557,13 @@ namespace CSSPanel
 
 			bool kill = command.GetArg(3).ToLower().Equals("-k");
 
-			Helper.LogCommand(caller, command);
-
 			playersToTarget.ForEach(player =>
 			{
-				ChangeTeam(caller, player, _teamName, teamNum, kill, callerName);
+				ChangeTeam(caller, player, _teamName, teamNum, kill, callerName, command);
 			});
 		}
 
-		public void ChangeTeam(CCSPlayerController? caller, CCSPlayerController player, string teamName, CsTeam teamNum, bool kill, string? callerName = null)
+		public void ChangeTeam(CCSPlayerController? caller, CCSPlayerController player, string teamName, CsTeam teamNum, bool kill, string? callerName = null, CommandInfo? command = null)
 		{
 			if (!player.IsBot && player.SteamID.ToString().Length != 17)
 				return;
@@ -631,6 +606,12 @@ namespace CSSPanel
 					}
 				}
 			}
+
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 		}
 
 		[ConsoleCommand("css_rename", "Rename a player.")]
@@ -647,13 +628,8 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && !player.IsHLTV).ToList();
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			Helper.LogCommand(caller, command);
+			Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 
 			playersToTarget.ForEach(player =>
 			{
@@ -662,7 +638,6 @@ namespace CSSPanel
 
 				if (caller!.CanTarget(player))
 				{
-
 					if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 					{
 						foreach (CCSPlayerController _player in Helper.GetValidPlayers())
@@ -691,12 +666,6 @@ namespace CSSPanel
 			TargetResult? targets = GetTarget(command);
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && !player.IsHLTV).ToList();
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			playersToTarget.ForEach(player =>
 			{
 				if (!player.IsBot && player.SteamID.ToString().Length != 17)
@@ -704,12 +673,12 @@ namespace CSSPanel
 
 				if (caller!.CanTarget(player))
 				{
-					Respawn(caller, player, callerName);
+					Respawn(caller, player, callerName, command);
 				}
 			});
 		}
 
-		public void Respawn(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null)
+		public void Respawn(CCSPlayerController? caller, CCSPlayerController player, string? callerName = null, CommandInfo? command = null)
 		{
 			callerName ??= caller == null ? "Console" : caller.PlayerName;
 
@@ -720,7 +689,11 @@ namespace CSSPanel
 			VirtualFunction.CreateVoid<CCSPlayerController>(player.Handle,
 															GameData.GetOffset("CCSPlayerController_Respawn"))(player);
 
-			Helper.LogCommand(caller, $"css_respawn {player.PlayerName}");
+			if (command != null)
+			{
+				Helper.LogCommand(caller, command);
+				Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
+			}
 
 			if (caller == null || caller != null && !silentPlayers.Contains(caller.Slot))
 			{
@@ -754,13 +727,8 @@ namespace CSSPanel
 
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && !player.IsHLTV).ToList();
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
 			Helper.LogCommand(caller, command);
+			Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 
 			playersToTarget.ForEach(player =>
 			{
@@ -810,14 +778,8 @@ namespace CSSPanel
 
 			List<CCSPlayerController> playersToTarget = targets!.Players.Where(player => player != null && player.IsValid && !player.IsHLTV).ToList();
 
-			if (_discordWebhookClientLog != null && _localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				_discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(_localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
-
-
 			Helper.LogCommand(caller, command);
+			Helper.SendDiscordLogMessage(caller, command, _discordWebhookClientLog, _localizer);
 
 			playersToTarget.ForEach(player =>
 			{
