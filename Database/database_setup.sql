@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `sa_bans` (
 								`unban_reason` TEXT NULL DEFAULT NULL,
 						 		`comment` TEXT NULL DEFAULT NULL,
                                 `duration` INT NOT NULL,
-                                `ends` TIMESTAMP NOT NULL,
+                                `ends` TIMESTAMP NULL,
                                 `created` TIMESTAMP NOT NULL,
 								`server_id` INT NULL,
                                 `status` ENUM('ACTIVE', 'UNBANNED', 'EXPIRED', '') NOT NULL DEFAULT 'ACTIVE'
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS `sa_mutes` (
 						 `unmute_reason` TEXT NULL DEFAULT NULL,
 						 `comment` TEXT NULL DEFAULT NULL,
 						 `duration` int(11) NOT NULL,
-						 `ends` timestamp NOT NULL,
+						 `ends` timestamp NULL,
 						 `created` timestamp NOT NULL,
 						 `type` enum('GAG','MUTE','SILENCE','') NOT NULL DEFAULT 'GAG',
 						 `server_id` INT NULL,

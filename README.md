@@ -62,7 +62,7 @@ Thanks a lot to [daffyyyy](https://github.com/daffyyyy) for the original plugin,
 - team_chat @Message - Say message to all admins // @css/chat
 ```
 
-### Requirments
+### Requirements
 
 - [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/) **tested on v178**
 - MySQL **tested on MySQL (MariaDB) Server version: 10.11.4-MariaDB-1~deb12u1 Debian 12**
