@@ -26,22 +26,31 @@ namespace CSSPanel
 			{
 				try
 				{
+					List<string> upgradeMySQLCommands = new()
+					{
+						"ALTER TABLE `sa_mutes` CHANGE `type` `type` ENUM('GAG','MUTE', 'SILENCE', '') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'GAG';",
+						"ALTER TABLE `sa_servers` MODIFY COLUMN `hostname` varchar(128);",
+						"ALTER TABLE `sa_bans` MODIFY `ends` TIMESTAMP NULL DEFAULT NULL;",
+						"ALTER TABLE `sa_statistics` DROP `created`;",
+						"ALTER TABLE `sa_admins` CHANGE `server_id` `server_id` VARCHAR(50) NULL DEFAULT NULL;",
+						"ALTER TABLE `sa_servers` ADD COLUMN IF NOT EXISTS `rcon` VARCHAR(64) NULL;"
+					};
+
 					using var connection = await _database.GetConnectionAsync();
-					var commandText = "ALTER TABLE `sa_mutes` CHANGE `type` `type` ENUM('GAG','MUTE', 'SILENCE', '') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'GAG';";
 
-					using var commandSql = connection.CreateCommand();
-					commandSql.CommandText = commandText;
-					await commandSql.ExecuteNonQueryAsync();
-
-					commandText = "ALTER TABLE `sa_servers` MODIFY COLUMN `hostname` varchar(128);";
-					using var commandSql1 = connection.CreateCommand();
-					commandSql1.CommandText = commandText;
-					await commandSql1.ExecuteNonQueryAsync();
-
-					commandText = "ALTER TABLE `sa_bans` MODIFY `ends` TIMESTAMP NULL DEFAULT NULL;";
-					using var commandSql2 = connection.CreateCommand();
-					commandSql2.CommandText = commandText;
-					await commandSql2.ExecuteNonQueryAsync();
+					foreach (string upgradeCommand in upgradeMySQLCommands)
+					{
+						try
+						{
+							using var commandSql = connection.CreateCommand();
+							commandSql.CommandText = upgradeCommand;
+							await commandSql.ExecuteNonQueryAsync();
+						}
+						catch (Exception ex)
+						{
+							Logger.LogError($"[UPGRADE] Error while executing mysql command: {upgradeCommand} {ex.Message}");
+						}
+					}
 
 					Server.NextFrame(() =>
 					{
