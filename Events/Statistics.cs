@@ -49,8 +49,7 @@ public partial class CSSPanel
 				string sql = "INSERT INTO `sa_statistics` (`serverId`, `playerId`, `playerName`, `playerIP`, `connectTime`, `flags`, `map`) " +
 					"VALUES (@serverId, @playerId, @playerName, @playerIP, @connectTime, @flags, @map)";
 
-				List<(List<string>, int)> admin = await _adminManager.GetAdminFlags(playerId);
-				List<string> joinedFlags = admin.Select(tuple => string.Join(",", tuple.Item1)).ToList();
+				List<string> adminFlags = await _adminManager.GetAdminFlagsAsString(playerId);
 
 				await connection.ExecuteAsync(sql, new
 				{
@@ -59,7 +58,7 @@ public partial class CSSPanel
 					playerName,
 					playerIP = ipAddress,
 					connectTime = Time,
-					flags = joinedFlags,
+					flags = adminFlags.Count > 0 ? string.Join(",", adminFlags) : null,
 					map = Map
 				});
 			}

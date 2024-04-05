@@ -78,6 +78,61 @@ public class AdminSQLManager
 		return filteredFlagsWithImmunity;
 	}
 
+	public async Task<List<string>> GetAdminFlagsAsString(string steamId)
+	{
+		DateTime now = DateTime.UtcNow.ToLocalTime();
+
+		await using MySqlConnection connection = await _database.GetConnectionAsync();
+
+		string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
+		List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { PlayerSteamID = steamId, CurrentTime = now, serverid = CSSPanel.ServerId }))?.ToList();
+
+		if (activeFlags == null)
+		{
+			return new List<string>();
+		}
+
+		List<string> flagsList = new List<string>();
+
+		foreach (dynamic flags in activeFlags)
+		{
+			if (flags is not IDictionary<string, object> flagsDict)
+			{
+				continue;
+			}
+
+			if (!flagsDict.TryGetValue("flags", out var flagsValueObj))
+			{
+				continue;
+			}
+
+			if (!(flagsValueObj is string flagsValue))
+			{
+				continue;
+			}
+
+			Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}");
+
+			// If flags start with '#', fetch flags from sa_admins_groups
+			if (flagsValue.StartsWith("#"))
+			{
+				string groupSql = "SELECT flags FROM sa_admins_groups WHERE id = @GroupId";
+				var group = await connection.QueryFirstOrDefaultAsync(groupSql, new { GroupId = flagsValue });
+
+				if (group != null)
+				{
+					flagsValue = group.flags;
+				}
+			}
+
+			Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}");
+
+			flagsList.AddRange(flagsValue.Split(','));
+		}
+
+		return flagsList;
+	}
+
 	public async Task<List<(string, List<string>, int, DateTime?)>> GetAllPlayersFlags()
 	{
 		DateTime now = DateTime.UtcNow.ToLocalTime();
