@@ -5,6 +5,7 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Entities;
+using CSSPanel.Menus;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using System.Data;
@@ -31,7 +32,11 @@ public partial class CSSPanel
 		// Chat Log
 		AddCommandListener("say", OnPlayerSayPublic, HookMode.Post);
 		AddCommandListener("say_team", OnPlayerSayTeam, HookMode.Post);
-	}
+
+        // Custom Reason
+        AddCommandListener("say", ManagePlayersMenu.Listener_Say);
+        AddCommandListener("say_team", ManagePlayersMenu.Listener_Say);
+    }
 
 	bool IsStringValid(string input)
 	{
