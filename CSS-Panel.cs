@@ -12,7 +12,7 @@ using System.Collections.Concurrent;
 
 namespace CSSPanel;
 
-[MinimumApiVersion(201)]
+[MinimumApiVersion(215)]
 public partial class CSSPanel : BasePlugin, IPluginConfig<CSSPanelConfig>
 {
 	public static CSSPanel Instance { get; private set; } = new();
