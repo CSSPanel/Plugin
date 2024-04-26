@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
+using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
 
@@ -101,62 +102,132 @@ namespace CSSPanel.Menus
 			CSSPanel.Instance.Slay(admin, player);
 		}
 
-		private static void KickMenu(CCSPlayerController admin, CCSPlayerController player)
-		{
-			BaseMenu menu = AdminMenu.CreateMenu($"Kick: {player.PlayerName}");
-			List<string> options = new()
-			{
-				"Voice Abuse",
-				"Chat Abuse",
-				"Admin disrespect",
-				"Other"
-			};
+        private static Dictionary<CCSPlayerController, Action<string>> customReasonCallbacks = new Dictionary<CCSPlayerController, Action<string>>();
+        public static HookResult Listener_Say(CCSPlayerController? player, CommandInfo commandinfo)
+        {
+            if (player == null) return HookResult.Continue;
 
-			foreach (string option in options)
-			{
-				menu.AddMenuOption(option, (_, _) => { Kick(admin, player, option); });
-			}
+            var message = commandinfo.ArgString;
 
-			AdminMenu.OpenMenu(admin, menu);
-		}
+            if (customReasonCallbacks.TryGetValue(player, out var callback))
+            {
+                callback(message);
 
-		private static void Kick(CCSPlayerController admin, CCSPlayerController player, string reason)
-		{
-			CSSPanel.Instance.Kick(admin, player, reason);
-		}
+                customReasonCallbacks.Remove(player);
+            }
 
-		private static void BanMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
+            return HookResult.Continue;
+        }
+        private static void KickMenu(CCSPlayerController admin, CCSPlayerController player)
+        {
+            BaseMenu menu = AdminMenu.CreateMenu($"Kick: {player.PlayerName}");
+            List<string> options = new()
+            {
+				"Custom Reason",
+                "Voice Abuse",
+                "Chat Abuse",
+                "Admin disrespect",
+                "Other"
+            };
+
+            foreach (string option in options)
+            {
+                if (option == "Custom Reason")
+                {
+                    menu.AddMenuOption(option, (_, _) =>
+                    {
+                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
+
+                        customReasonCallbacks[admin] = (customReason) =>
+                        {
+                            if (customReason.ToLower().Contains("cancel"))
+                            {
+                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
+                            }
+                            else
+                            {
+                                customReason = customReason.Replace("\"", "");
+                                Kick(admin, player, customReason);
+                            }
+
+                            customReasonCallbacks.Remove(player);
+                        };
+                    });
+                }
+                else
+                {
+                    menu.AddMenuOption(option, (_, _) => { Kick(admin, player, option); });
+                }
+            }
+
+            AdminMenu.OpenMenu(admin, menu);
+        }
+
+        private static void Kick(CCSPlayerController admin, CCSPlayerController player, string reason)
+        {
+            CSSPanel.Instance.Kick(admin, player, reason);
+        }
+
+        private static void BanMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
 		{
 			BaseMenu menu = AdminMenu.CreateMenu($"Ban: {player.PlayerName}");
 			List<string> options = new()
 			{
-				"Hacking",
+                "Custom Reason",
+                "Hacking",
 				"Voice Abuse",
 				"Chat Abuse",
 				"Admin disrespect",
 				"Other"
 			};
 
-			foreach (string option in options)
-			{
-				menu.AddMenuOption(option, (_, _) => { Ban(admin, player, duration, option); });
-			}
+            foreach (string option in options)
+            {
+                if (option == "Custom Reason")
+                {
+                    menu.AddMenuOption(option, (_, _) =>
+                    {
+                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
 
-			AdminMenu.OpenMenu(admin, menu);
-		}
+                        customReasonCallbacks[admin] = (customReason) =>
+                        {
+                            if (customReason.ToLower().Contains("cancel"))
+                            {
+                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
+                            }
+                            else
+                            {
+                                customReason = customReason.Replace("\"", "");
+                                Ban(admin, player, duration, customReason);
+                            }
 
-		private static void Ban(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-		{
-			CSSPanel.Instance.Ban(admin, player, duration, reason);
-		}
+                            customReasonCallbacks.Remove(player);
+                        };
 
-		private static void GagMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
+                    });
+                }
+                else
+                {
+                    menu.AddMenuOption(option, (_, _) => { Ban(admin, player, duration, option); });
+                }
+            }
+
+            AdminMenu.OpenMenu(admin, menu);
+        }
+
+        private static void Ban(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
+        {
+            CSSPanel.Instance.Ban(admin, player, duration, reason);
+        }
+
+        private static void GagMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
 		{
 			// TODO: Localize and make options in config?
 			BaseMenu menu = AdminMenu.CreateMenu($"Gag: {player.PlayerName}");
 			List<string> options = new()
 			{
-				"Advertising",
+                "Custom Reason",
+                "Advertising",
 				"Spamming",
 				"Spectator camera abuse",
 				"Hate",
@@ -164,26 +235,52 @@ namespace CSSPanel.Menus
 				"Other"
 			};
 
-			foreach (string option in options)
-			{
-				menu.AddMenuOption(option, (_, _) => { Gag(admin, player, duration, option); });
-			}
+            foreach (string option in options)
+            {
+                if (option == "Custom Reason")
+                {
+                    menu.AddMenuOption(option, (_, _) =>
+                    {
+                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
 
-			AdminMenu.OpenMenu(admin, menu);
-		}
+                        customReasonCallbacks[admin] = (customReason) =>
+                        {
+                            if (customReason.ToLower().Contains("cancel"))
+                            {
+                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
+                            }
+                            else
+                            {
+                                customReason = customReason.Replace("\"", "");
+                                Gag(admin, player, duration, customReason);
+                            }
 
-		private static void Gag(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-		{
-			CSSPanel.Instance.Gag(admin, player, duration, reason);
-		}
+                            customReasonCallbacks.Remove(player);
+                        };
+                    });
+                }
+                else
+                {
+                    menu.AddMenuOption(option, (_, _) => { Gag(admin, player, duration, option); });
+                }
+            }
 
-		private static void MuteMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
+            AdminMenu.OpenMenu(admin, menu);
+        }
+
+        private static void Gag(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
+        {
+            CSSPanel.Instance.Gag(admin, player, duration, reason);
+        }
+
+        private static void MuteMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
 		{
 			// TODO: Localize and make options in config?
 			BaseMenu menu = AdminMenu.CreateMenu($"Mute: {player.PlayerName}");
 			List<string> options = new()
 			{
-				"Shouting",
+                "Custom Reason",
+                "Shouting",
 				"Playing music",
 				"Advertising",
 				"Spamming",
@@ -193,26 +290,52 @@ namespace CSSPanel.Menus
 				"Other"
 			};
 
-			foreach (string option in options)
-			{
-				menu.AddMenuOption(option, (_, _) => { Mute(admin, player, duration, option); });
-			}
+            foreach (string option in options)
+            {
+                if (option == "Custom Reason")
+                {
+                    menu.AddMenuOption(option, (_, _) =>
+                    {
+                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
 
-			AdminMenu.OpenMenu(admin, menu);
-		}
+                        customReasonCallbacks[admin] = (customReason) =>
+                        {
+                            if (customReason.ToLower().Contains("cancel"))
+                            {
+                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
+                            }
+                            else
+                            {
+                                customReason = customReason.Replace("\"", "");
+                                Mute(admin, player, duration, customReason);
+                            }
 
-		private static void Mute(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-		{
-			CSSPanel.Instance.Mute(admin, player, duration, reason);
-		}
+                            customReasonCallbacks.Remove(player);
+                        };
+                    });
+                }
+                else
+                {
+                    menu.AddMenuOption(option, (_, _) => { Mute(admin, player, duration, option); });
+                }
+            }
 
-		private static void SilenceMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
+            AdminMenu.OpenMenu(admin, menu);
+        }
+
+        private static void Mute(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
+        {
+            CSSPanel.Instance.Mute(admin, player, duration, reason);
+        }
+
+        private static void SilenceMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
 		{
 			// TODO: Localize and make options in config?
 			BaseMenu menu = AdminMenu.CreateMenu($"Silence: {player.PlayerName}");
 			List<string> options = new()
 			{
-				"Shouting",
+                "Custom Reason",
+                "Shouting",
 				"Playing music",
 				"Advertising",
 				"Spamming",
@@ -222,20 +345,46 @@ namespace CSSPanel.Menus
 				"Other"
 			};
 
-			foreach (string option in options)
-			{
-				menu.AddMenuOption(option, (_, _) => { Silence(admin, player, duration, option); });
-			}
+            foreach (string option in options)
+            {
+                if (option == "Custom Reason")
+                {
+                    menu.AddMenuOption(option, (_, _) =>
+                    {
+                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
 
-			AdminMenu.OpenMenu(admin, menu);
-		}
+                        customReasonCallbacks[admin] = (customReason) =>
+                        {
+                            if (customReason.ToLower().Contains("cancel"))
+                            {
+                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
+                            }
+                            else
+                            {
+                                customReason = customReason.Replace("\"", "");
+                                Silence(admin, player, duration, customReason);
+                            }
 
-		private static void Silence(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-		{
-			CSSPanel.Instance.Silence(admin, player, duration, reason);
-		}
+                            customReasonCallbacks.Remove(player);
+                        };
 
-		private static void ForceTeamMenu(CCSPlayerController admin, CCSPlayerController player)
+                    });
+                }
+                else
+                {
+                    menu.AddMenuOption(option, (_, _) => { Silence(admin, player, duration, option); });
+                }
+            }
+
+            AdminMenu.OpenMenu(admin, menu);
+        }
+
+        private static void Silence(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
+        {
+            CSSPanel.Instance.Silence(admin, player, duration, reason);
+        }
+
+        private static void ForceTeamMenu(CCSPlayerController admin, CCSPlayerController player)
 		{
 			// TODO: Localize
 			BaseMenu menu = AdminMenu.CreateMenu($"Force {player.PlayerName}'s Team");
