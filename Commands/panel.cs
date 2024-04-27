@@ -101,10 +101,10 @@ namespace CSSPanel
 			var server = new
 			{
 				map = Map,
-				players = Players,
-				maxPlayers = MaxPlayers,
-				maps = Maps,
-				pluginVersion = ModuleVersion
+				p = Players,
+				mP = MaxPlayers,
+				// maps = Maps,
+				pr = ModuleVersion
 			};
 
 			List<Task<object>> playerTasks = playersToTarget
@@ -119,25 +119,25 @@ namespace CSSPanel
 				string time = player.ActionTrackingServices!.MatchStats.LiveTime.ToString();
 				var user = new
 				{
-					userId = player.UserId,
+					id = player.UserId,
 					// playerName = player.PlayerName,
-					ipAddress = player.IpAddress?.Split(":")[0],
+					// ipAddress = player.IpAddress?.Split(":")[0],
 					// accountId = player.AuthorizedSteamID?.AccountId.ToString(),
 					// steamId2 = player.AuthorizedSteamID?.SteamId2,
 					// steamId3 = player.AuthorizedSteamID?.SteamId3,
-					steam64 = player.AuthorizedSteamID?.SteamId64.ToString(),
-					ping = player.Ping,
-					team = player.Team,
+					s64 = player.AuthorizedSteamID?.SteamId64.ToString(),
+					// ping = player.Ping,
+					t = player.Team,
 					// clanName = player.ClanName,
-					kills,
-					deaths,
+					k = kills,
+					d = deaths,
 					// assists,
 					// headshots,
 					// damage,
-					score = player.Score,
+					s = player.Score,
 					// roundScore = player.RoundScore,
 					// roundsWon = player.RoundsWon,
-					mvps = player.MVPs,
+					// mvps = player.MVPs,
 					// time, // ? Fix this, it's not the time the player has been connected
 					// avatar = player.AuthorizedSteamID != null ? await GetProfilePictureAsync(player.AuthorizedSteamID.SteamId64.ToString(), true) : ""
 				};
