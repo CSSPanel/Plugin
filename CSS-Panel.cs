@@ -38,7 +38,7 @@ public partial class CSSPanel : BasePlugin, IPluginConfig<CSSPanelConfig>
 	public override string ModuleName => "CSS-Panel";
 	public override string ModuleDescription => "Simple admin plugin for Counter-Strike 2 :)";
 	public override string ModuleAuthor => "daffyy & Dliix66 & ShiNxz";
-	public override string ModuleVersion => "1.5.1";
+	public override string ModuleVersion => "1.5.2";
 
 	private static readonly HttpClient httpClient = new HttpClient();
 
