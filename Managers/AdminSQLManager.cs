@@ -3,6 +3,7 @@ using Dapper;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CSSPanel;
 
@@ -21,61 +22,49 @@ public class AdminSQLManager
 		_database = database;
 	}
 
-	public async Task<List<(List<string>, int)>> GetAdminFlags(string steamId)
+	// Get the relevant server groups from the sa_servers_groups table by searching if the serverId is in the servers set column
+	public async Task<List<string>> GetServerGroups()
 	{
-		DateTime now = DateTime.UtcNow.ToLocalTime();
-
 		await using MySqlConnection connection = await _database.GetConnectionAsync();
 
-		string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
-		List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { PlayerSteamID = steamId, CurrentTime = now, serverid = CSSPanel.ServerId }))?.ToList();
+		string sql = "SELECT id FROM sa_servers_groups WHERE FIND_IN_SET(@ServerId, servers)";
+		List<dynamic>? serverGroups = (await connection.QueryAsync(sql, new { ServerId = CSSPanel.ServerId }))?.ToList();
 
-		if (activeFlags == null)
+		if (serverGroups == null)
 		{
-			return new List<(List<string>, int)>();
+			return new List<string>();
 		}
 
-		List<(List<string>, int)> filteredFlagsWithImmunity = new List<(List<string>, int)>();
+		List<string> serverGroupsList = new List<string>();
 
-		foreach (dynamic flags in activeFlags)
+		foreach (dynamic serverGroup in serverGroups)
 		{
-			if (flags is not IDictionary<string, object> flagsDict)
+			if (serverGroup is not IDictionary<string, object> serverGroupDict)
 			{
+				Console.WriteLine("[GetServerGroups] Failed to parse server group.");
 				continue;
 			}
 
-			if (!flagsDict.TryGetValue("flags", out var flagsValueObj) || !flagsDict.TryGetValue("immunity", out var immunityValueObj))
+			if (!serverGroupDict.TryGetValue("id", out var idObj))
 			{
+				Console.WriteLine("[GetServerGroups] Failed to get server group id.");
 				continue;
 			}
 
-			if (!(flagsValueObj is string flagsValue) || !int.TryParse(immunityValueObj.ToString(), out var immunityValue))
+			if (idObj is not string id)
 			{
+				// Convert to string and add it to the list
+				// Console.WriteLine("[GetServerGroups] Failed to parse server group id.");
+				serverGroupsList.Add(idObj.ToString()!);
+
 				continue;
 			}
 
-			Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}, Immunity: {immunityValue}");
-
-			// If flags start with '#', fetch flags and immunity from sa_admins_groups
-			if (flagsValue.StartsWith("#"))
-			{
-				string groupSql = "SELECT flags, immunity FROM sa_admins_groups WHERE id = @GroupId";
-				var group = await connection.QueryFirstOrDefaultAsync(groupSql, new { GroupId = flagsValue });
-
-				if (group != null)
-				{
-					flagsValue = group.flags;
-					immunityValue = group.immunity;
-				}
-			}
-
-			Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}, Immunity: {immunityValue}");
-
-
-			filteredFlagsWithImmunity.Add((flagsValue.Split(',').ToList(), immunityValue));
+			serverGroupsList.Add(id);
 		}
 
-		return filteredFlagsWithImmunity;
+		Console.WriteLine($"[GetServerGroups] Server Groups List: {string.Join(", ", serverGroupsList)}");
+		return serverGroupsList;
 	}
 
 	public async Task<List<string>> GetAdminFlagsAsString(string steamId)
@@ -84,7 +73,14 @@ public class AdminSQLManager
 
 		await using MySqlConnection connection = await _database.GetConnectionAsync();
 
-		string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
+		// string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
+		// string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
+		List<string> serverGroups = await GetServerGroups();
+		string serverGroupsCondition = string.Join(" OR ", serverGroups.Select(g => $"FIND_IN_SET({g}, servers_groups) > 0"));
+
+		string GroupCheck = serverGroups.Count > 0 ? $"AND (((server_id IS NULL AND servers_groups IS NULL) OR FIND_IN_SET(@serverid, server_id) > 0) OR (servers_groups IS NULL OR {serverGroupsCondition}))" : "AND ((server_id IS NULL AND servers_groups IS NULL) OR FIND_IN_SET(@serverid, server_id) > 0)";
+		string sql = $"SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) {GroupCheck}";
+
 		List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { PlayerSteamID = steamId, CurrentTime = now, serverid = CSSPanel.ServerId }))?.ToList();
 
 		if (activeFlags == null)
@@ -111,8 +107,6 @@ public class AdminSQLManager
 				continue;
 			}
 
-			Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}");
-
 			// If flags start with '#', fetch flags from sa_admins_groups
 			if (flagsValue.StartsWith("#"))
 			{
@@ -124,8 +118,6 @@ public class AdminSQLManager
 					flagsValue = group.flags;
 				}
 			}
-
-			Console.WriteLine($"SteamId {steamId} Flags: {flagsValue}");
 
 			flagsList.AddRange(flagsValue.Split(','));
 		}
@@ -141,7 +133,13 @@ public class AdminSQLManager
 		{
 			await using MySqlConnection connection = await _database.GetConnectionAsync();
 
-			string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
+			// string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
+			List<string> serverGroups = await GetServerGroups();
+			string serverGroupsCondition = string.Join(" OR ", serverGroups.Select(g => $"FIND_IN_SET({g}, servers_groups) > 0"));
+
+			string GroupCheck = serverGroups.Count > 0 ? $"AND (((server_id IS NULL AND servers_groups IS NULL) OR FIND_IN_SET(@serverid, server_id) > 0) OR (servers_groups IS NULL OR {serverGroupsCondition}))" : "AND ((server_id IS NULL AND servers_groups IS NULL) OR FIND_IN_SET(@serverid, server_id) > 0)";
+			string sql = $"SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) {GroupCheck}";
+
 			List<dynamic>? activeFlags = (await connection.QueryAsync(sql, new { CurrentTime = now, serverid = CSSPanel.ServerId }))?.ToList();
 
 			if (activeFlags == null)
@@ -210,9 +208,6 @@ public class AdminSQLManager
 						}
 					}
 				}
-
-				Console.WriteLine($"Flags Check: SteamId {steamId} Flags: {flagsValue}, Immunity: {immunityValue}");
-				//
 
 				filteredFlagsWithImmunity.Add((steamId, flagsValue.Split(',').ToList(), immunityValue, ends));
 			}
