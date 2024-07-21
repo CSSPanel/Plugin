@@ -3,6 +3,15 @@ using System.Text.Json.Serialization;
 
 namespace CSSPanel
 {
+	public class AdminFlag
+	{
+		[JsonPropertyName("name")]
+		public required string Name { get; set; }
+
+		[JsonPropertyName("flag")]
+		public required string Flag { get; set; }
+	}
+
 	public class Discord
 	{
 		[JsonPropertyName("DiscordLogWebhook")]
@@ -33,6 +42,15 @@ namespace CSSPanel
 		public bool Statistics_Enable { get; set; } = true;
 	}
 
+	public class DurationItem
+	{
+		[JsonPropertyName("name")]
+		public required string Name { get; set; }
+
+		[JsonPropertyName("duration")]
+		public int Duration { get; set; }
+	}
+
 	public class CustomServerCommandData
 	{
 		[JsonPropertyName("Flag")]
@@ -48,9 +66,73 @@ namespace CSSPanel
 		public bool ExecuteOnClient { get; set; } = false;
 	}
 
+	public class MenuConfig
+	{
+		[JsonPropertyName("Durations")]
+		public DurationItem[] Durations { get; set; } =
+		[
+			new DurationItem { Name = "1 minute", Duration = 1 },
+			new DurationItem { Name = "5 minutes", Duration = 5 },
+			new DurationItem { Name = "15 minutes", Duration = 15 },
+			new DurationItem { Name = "1 hour", Duration = 60 },
+			new DurationItem { Name = "1 day", Duration = 60 * 24 },
+			new DurationItem { Name = "7 days", Duration = 60 * 24 * 7 },
+			new DurationItem { Name = "14 days", Duration = 60 * 24 * 14 },
+			new DurationItem { Name = "30 days", Duration = 60 * 24 * 30 },
+			new DurationItem { Name = "Permanent", Duration = 0 }
+		];
+
+		[JsonPropertyName("BanReasons")]
+		public List<string> BanReasons { get; set; } =
+		[
+			"Hacking",
+			"Voice Abuse",
+			"Chat Abuse",
+			"Admin disrespect",
+			"Other"
+		];
+
+		[JsonPropertyName("KickReasons")]
+		public List<string> KickReasons { get; set; } =
+		[
+			"Voice Abuse",
+			"Chat Abuse",
+			"Admin disrespect",
+			"Other"
+		];
+
+		[JsonPropertyName("MuteReasons")]
+		public List<string> MuteReasons { get; set; } =
+		[
+			"Advertising",
+			"Spamming",
+			"Spectator camera abuse",
+			"Hate",
+			"Admin disrespect",
+			"Other"
+		];
+
+		[JsonPropertyName("AdminFlags")]
+		public AdminFlag[] AdminFlags { get; set; } =
+		[
+			new AdminFlag { Name = "Generic", Flag = "@css/generic" },
+			new AdminFlag { Name = "Chat", Flag = "@css/chat" },
+			new AdminFlag { Name = "Change Map", Flag = "@css/changemap" },
+			new AdminFlag { Name = "Slay", Flag = "@css/slay" },
+			new AdminFlag { Name = "Kick", Flag = "@css/kick" },
+			new AdminFlag { Name = "Ban", Flag = "@css/ban" },
+			new AdminFlag { Name = "Perm Ban", Flag = "@css/permban" },
+			new AdminFlag { Name = "Unban", Flag = "@css/unban" },
+			new AdminFlag { Name = "Show IP", Flag = "@css/showip" },
+			new AdminFlag { Name = "Cvar", Flag = "@css/cvar" },
+			new AdminFlag { Name = "Rcon", Flag = "@css/rcon" },
+			new AdminFlag { Name = "Root (all flags)", Flag = "@css/root" }
+		];
+	}
+
 	public class CSSPanelConfig : BasePluginConfig
 	{
-		[JsonPropertyName("ConfigVersion")] public override int Version { get; set; } = 10;
+		[JsonPropertyName("ConfigVersion")] public override int Version { get; set; } = 17;
 
 		[JsonPropertyName("DatabaseHost")]
 		public string DatabaseHost { get; set; } = "";
@@ -67,6 +149,9 @@ namespace CSSPanel
 		[JsonPropertyName("DatabaseName")]
 		public string DatabaseName { get; set; } = "";
 
+		[JsonPropertyName("ReloadAdminsEveryMapChange")]
+		public bool ReloadAdminsEveryMapChange { get; set; } = false;
+
 		[JsonPropertyName("UseChatMenu")]
 		public bool UseChatMenu { get; set; } = false;
 
@@ -79,6 +164,14 @@ namespace CSSPanel
 		[JsonPropertyName("BanType")]
 		public int BanType { get; set; } = 1;
 
+		[JsonPropertyName("TimeMode")]
+		public int TimeMode { get; set; } = 1;
+
+		[JsonPropertyName("MaxBanDuration")]
+		public int MaxBanDuration { get; set; } = 60 * 24 * 7;
+		[JsonPropertyName("MultiServerMode")]
+		public bool MultiServerMode { get; set; } = true;
+
 		[JsonPropertyName("ExpireOldIpBans")]
 		public int ExpireOldIpBans { get; set; } = 0;
 
@@ -86,16 +179,19 @@ namespace CSSPanel
 		public int TeamSwitchType { get; set; } = 1;
 
 		[JsonPropertyName("Discord")]
-		public Discord Discord { get; set; } = new Discord();
+		public Discord Discord { get; set; } = new();
 
 		[JsonPropertyName("DefaultMaps")]
-		public List<string> DefaultMaps { get; set; } = new List<string>();
+		public List<string> DefaultMaps { get; set; } = new();
 
 		[JsonPropertyName("WorkshopMaps")]
-		public List<string> WorkshopMaps { get; set; } = new List<string>();
+		public Dictionary<string, long?> WorkshopMaps { get; set; } = new();
 
 		[JsonPropertyName("CustomServerCommands")]
-		public List<CustomServerCommandData> CustomServerCommands { get; set; } = new List<CustomServerCommandData>();
+		public List<CustomServerCommandData> CustomServerCommands { get; set; } = new();
+
+		[JsonPropertyName("MenuConfig")]
+		public MenuConfig MenuConfigs { get; set; } = new();
 
 		[JsonPropertyName("DefaultServerIP")]
 		public string DefaultServerIP { get; set; } = "";
@@ -105,8 +201,11 @@ namespace CSSPanel
 
 		[JsonPropertyName("ChatLog")]
 		public ChatLog ChatLog { get; set; } = new ChatLog();
-		
+
 		[JsonPropertyName("Statistics")]
 		public Statistics Statistics { get; set; } = new Statistics();
+
+		[JsonPropertyName("ShowAdminName")]
+		public bool ShowAdminName { get; set; } = true;
 	}
 }

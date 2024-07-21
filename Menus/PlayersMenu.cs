@@ -1,7 +1,6 @@
-using System.Web;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
-using CounterStrikeSharp.API.Modules.Menu;
+using System.Web;
 
 namespace CSSPanel.Menus
 {
@@ -12,9 +11,9 @@ namespace CSSPanel.Menus
 			OpenMenu(admin, menuName, onSelectAction, p => p.IsBot == false);
 		}
 
-		public static void OpenAdminPlayersMenu(CCSPlayerController admin, string menuName, Action<CCSPlayerController, CCSPlayerController> onSelectAction, Func<CCSPlayerController, bool>? enableFilter = null)
+		public static void OpenAdminPlayersMenu(CCSPlayerController admin, string menuName, Action<CCSPlayerController, CCSPlayerController> onSelectAction, Func<CCSPlayerController?, bool>? enableFilter = null)
 		{
-			OpenMenu(admin, menuName, onSelectAction, p => AdminManager.GetPlayerAdminData(p)?.Flags?.Count > 0);
+			OpenMenu(admin, menuName, onSelectAction, p => AdminManager.GetPlayerAdminData(p)?.Flags.Count > 0);
 		}
 
 		public static void OpenAliveMenu(CCSPlayerController admin, string menuName, Action<CCSPlayerController, CCSPlayerController> onSelectAction, Func<CCSPlayerController, bool>? enableFilter = null)
@@ -22,24 +21,33 @@ namespace CSSPanel.Menus
 			OpenMenu(admin, menuName, onSelectAction, p => p.PawnIsAlive);
 		}
 
-		public static void OpenDeadMenu(CCSPlayerController admin, string menuName, Action<CCSPlayerController, CCSPlayerController> onSelectAction, Func<CCSPlayerController, bool>? enableFilter = null)
+		public static void OpenDeadMenu(CCSPlayerController admin, string menuName, Action<CCSPlayerController, CCSPlayerController?> onSelectAction, Func<CCSPlayerController, bool>? enableFilter = null)
 		{
 			OpenMenu(admin, menuName, onSelectAction, p => p.PawnIsAlive == false);
 		}
 
 		public static void OpenMenu(CCSPlayerController admin, string menuName, Action<CCSPlayerController, CCSPlayerController> onSelectAction, Func<CCSPlayerController, bool>? enableFilter = null)
 		{
-			BaseMenu menu = AdminMenu.CreateMenu(menuName);
+			var menu = AdminMenu.CreateMenu(menuName);
 
-			IEnumerable<CCSPlayerController> players = Helper.GetValidPlayersWithBots();
-			foreach (CCSPlayerController player in players)
+			var players = Helper.GetValidPlayersWithBots();
+
+			foreach (var player in players)
 			{
-				string optionName = HttpUtility.HtmlEncode(player.PlayerName);
-				if (enableFilter != null && enableFilter(player) == false)
+				var playerName = player != null && player.PlayerName.Length > 26 ? player.PlayerName[..26] : player?.PlayerName;
+
+				var optionName = HttpUtility.HtmlEncode(playerName);
+				if (player != null && enableFilter != null && enableFilter(player) == false)
 					continue;
 
-				bool enabled = admin.CanTarget(player);
-				menu.AddMenuOption(optionName, (_, _) => { onSelectAction?.Invoke(admin, player); }, enabled == false);
+				var enabled = admin.CanTarget(player);
+
+				if (optionName != null)
+					menu.AddMenuOption(optionName, (_, _) =>
+						{
+							if (player != null) onSelectAction.Invoke(admin, player);
+						},
+						enabled == false);
 			}
 
 			AdminMenu.OpenMenu(admin, menu);

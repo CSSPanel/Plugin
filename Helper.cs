@@ -12,6 +12,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -23,7 +24,22 @@ namespace CSSPanel
 		private static readonly string AssemblyName = Assembly.GetExecutingAssembly().GetName().Name ?? "";
 		private static readonly string CfgPath = $"{Server.GameDirectory}/csgo/addons/counterstrikesharp/configs/plugins/{AssemblyName}/{AssemblyName}.json";
 
+		public delegate nint CNetworkSystem_UpdatePublicIp(nint a1);
+		public static CNetworkSystem_UpdatePublicIp? _networkSystemUpdatePublicIp;
+
 		internal static CSSPanelConfig? Config { get; set; }
+
+		public static bool IsDebugBuild
+		{
+			get
+			{
+#if DEBUG
+				return true;
+#else
+				return false;
+#endif
+			}
+		}
 
 		public static List<CCSPlayerController> GetPlayerFromName(string name)
 		{
@@ -47,28 +63,41 @@ namespace CSSPanel
 
 		public static List<CCSPlayerController> GetValidPlayers()
 		{
-			return Utilities.GetPlayers().FindAll(p => p != null && p.IsValid && p.SteamID.ToString().Length == 17 && !string.IsNullOrEmpty(p.IpAddress) && p.Connected == PlayerConnectedState.PlayerConnected && !p.IsBot && !p.IsHLTV);
+			return Utilities.GetPlayers().FindAll(p => p is
+			{ IsValid: true, IsBot: false, Connected: PlayerConnectedState.PlayerConnected });
 		}
 
-		public static List<CCSPlayerController> GetValidPlayersWithBots()
+		public static IEnumerable<CCSPlayerController?> GetValidPlayersWithBots()
 		{
 			return Utilities.GetPlayers().FindAll(p =>
-			p != null && p.IsValid && p.SteamID.ToString().Length == 17 && !string.IsNullOrEmpty(p.IpAddress) && p.Connected == PlayerConnectedState.PlayerConnected && !p.IsBot && !p.IsHLTV ||
-			p != null && p.IsValid && p.Connected == PlayerConnectedState.PlayerConnected && p.IsBot && !p.IsHLTV
+			 p is { IsValid: true, IsBot: false, IsHLTV: false } or { IsValid: true, IsBot: true, IsHLTV: false }
 			);
 		}
 
-		public static bool IsValidSteamID64(string input)
+		public static bool IsValidSteamId64(string input)
 		{
-			string pattern = @"^\d{17}$";
-
+			const string pattern = @"^\d{17}$";
 			return Regex.IsMatch(input, pattern);
 		}
 
-		public static bool IsValidIP(string input)
+		public static bool ValidateSteamId(string input, out SteamID? steamId)
 		{
-			string pattern = @"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
+			steamId = null;
 
+			if (string.IsNullOrEmpty(input))
+			{
+				return false;
+			}
+
+			if (!SteamID.TryParse(input, out var parsedSteamId)) return false;
+
+			steamId = parsedSteamId;
+			return true;
+		}
+
+		public static bool IsValidIp(string input)
+		{
+			const string pattern = @"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
 			return Regex.IsMatch(input, pattern);
 		}
 
@@ -81,30 +110,25 @@ namespace CSSPanel
 					return;
 				}
 
-				if (flags != null)
+				if (flags == null) return;
+				foreach (var flag in flags.Where(flag => !string.IsNullOrEmpty(flag)))
 				{
-					foreach (var flag in flags)
+					if (flag.StartsWith($"@"))
 					{
-						if (!string.IsNullOrEmpty(flag))
-						{
-							if (flag.StartsWith("@"))
-							{
-								//Console.WriteLine($"Adding permission {flag} to SteamID {steamid}");
-								AdminManager.AddPlayerPermissions(steamid, flag);
-							}
-							else if (flag.StartsWith("#"))
-							{
-								//Console.WriteLine($"Adding SteamID {steamid} to group {flag}");
-								AdminManager.AddPlayerToGroup(steamid, flag);
-							}
-						}
+						//Console.WriteLine($"Adding permission {flag} to SteamID {steamid}");
+						AdminManager.AddPlayerPermissions(steamid, flag);
 					}
-					AdminManager.SetPlayerImmunity(steamid, (uint)immunity);
+					else if (flag.StartsWith($"#"))
+					{
+						//Console.WriteLine($"Adding SteamID {steamid} to group {flag}");
+						AdminManager.AddPlayerToGroup(steamid, flag);
+					}
 				}
+
+				AdminManager.SetPlayerImmunity(steamid, immunity);
 			}
-			catch (Exception)
+			catch
 			{
-				return;
 			}
 		}
 
@@ -112,7 +136,7 @@ namespace CSSPanel
 		{
 			if (!string.IsNullOrEmpty(reason))
 			{
-				int escapeChars = reason.IndexOfAny(new char[] { ';', '|' });
+				var escapeChars = reason.IndexOfAny([';', '|']);
 
 				if (escapeChars != -1)
 				{
@@ -125,7 +149,7 @@ namespace CSSPanel
 
 		public static void PrintToCenterAll(string message)
 		{
-			Utilities.GetPlayers().Where(p => p is not null && p.IsValid && !p.IsBot && !p.IsHLTV).ToList().ForEach(controller =>
+			Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }).ToList().ForEach(controller =>
 			{
 				controller.PrintToCenter(message);
 			});
@@ -133,46 +157,47 @@ namespace CSSPanel
 
 		internal static void HandleVotes(CCSPlayerController player, ChatMenuOption option)
 		{
-			if (!CSSPanel.voteInProgress)
+			if (!CSSPanel.VoteInProgress)
 				return;
 
 			option.Disabled = true;
-			CSSPanel.voteAnswers[option.Text]++;
+			CSSPanel.VoteAnswers[option.Text]++;
 		}
 
 		internal static void LogCommand(CCSPlayerController? caller, CommandInfo command)
 		{
-			if (CSSPanel.Instance == null || CSSPanel._localizer == null)
+			if (CSSPanel._localizer == null)
 				return;
 
-			string playerName = caller?.PlayerName ?? "Console";
+			var playerName = caller?.PlayerName ?? "Console";
 
-			string? hostname = ConVar.Find("hostname")!.StringValue ?? CSSPanel._localizer["sa_unknown"];
+			var hostname = ConVar.Find("hostname")?.StringValue ?? CSSPanel._localizer["sa_unknown"];
 
-			CSSPanel.Instance.Logger.LogInformation($"{CSSPanel._localizer["sa_discord_log_command",
+			CSSPanel.Instance.Logger.LogInformation($"{CSSPanel._localizer[
+				"sa_discord_log_command",
 				playerName, command.GetCommandString]}".Replace("HOSTNAME", hostname).Replace("**", ""));
 		}
 
 		internal static void LogCommand(CCSPlayerController? caller, string command)
 		{
-			if (CSSPanel.Instance == null || CSSPanel._localizer == null)
+			if (CSSPanel._localizer == null)
 				return;
 
-			string playerName = caller?.PlayerName ?? "Console";
+			var playerName = caller?.PlayerName ?? "Console";
 
-			string? hostname = ConVar.Find("hostname")!.StringValue ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
+			var hostname = ConVar.Find("hostname")?.StringValue ?? CSSPanel._localizer["sa_unknown"];
 
-			CSSPanel.Instance.Logger.LogInformation($"{CSSPanel._localizer?["sa_discord_log_command",
+			CSSPanel.Instance.Logger.LogInformation($"{CSSPanel._localizer["sa_discord_log_command",
 				playerName, command]}".Replace("HOSTNAME", hostname).Replace("**", ""));
 		}
 
 		public static IEnumerable<Embed> GenerateEmbedsDiscord(string title, string description, string thumbnailUrl, Color color, string[] fieldNames, string[] fieldValues, bool[] inlineFlags)
 		{
-			string? hostname = ConVar.Find("hostname")!.StringValue ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
-			string? address = $"{(Config?.DefaultServerIP != "" ? Config?.DefaultServerIP : ConVar.Find("ip")!.StringValue)}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
+			var hostname = ConVar.Find("hostname")?.StringValue ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
+			var address = $"{ConVar.Find("ip")?.StringValue}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
 
-			description = description.Replace("{hostname}", hostname ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown");
-			description = description.Replace("{address}", address ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown");
+			description = description.Replace("{hostname}", hostname);
+			description = description.Replace("{address}", address);
 
 			var embed = new EmbedBuilder
 			{
@@ -182,7 +207,7 @@ namespace CSSPanel
 				Color = color,
 			};
 
-			for (int i = 0; i < fieldNames.Length; i++)
+			for (var i = 0; i < fieldNames.Length; i++)
 			{
 				fieldValues[i] = fieldValues[i].Replace("{hostname}", hostname ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown");
 				fieldValues[i] = fieldValues[i].Replace("{address}", address ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown");
@@ -191,7 +216,7 @@ namespace CSSPanel
 
 				if ((i + 1) % 2 == 0 && i < fieldNames.Length - 1)
 				{
-					embed.AddField("\u200b", "\u200b", false);
+					embed.AddField("\u200b", "\u200b");
 				}
 			}
 
@@ -200,12 +225,11 @@ namespace CSSPanel
 
 		public static void SendDiscordLogMessage(CCSPlayerController? caller, CommandInfo command, DiscordWebhookClient? discordWebhookClientLog, IStringLocalizer? localizer)
 		{
-			if (discordWebhookClientLog != null && localizer != null)
-			{
-				string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				string callerName = caller != null ? caller.PlayerName : "Console";
-				discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
-			}
+			if (discordWebhookClientLog == null || localizer == null) return;
+
+			var communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl() + ">" : "<https://steamcommunity.com/profiles/0>";
+			var callerName = caller != null ? caller.PlayerName : "Console";
+			discordWebhookClientLog.SendMessageAsync(Helper.GenerateMessageDiscord(localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", command.GetCommandString]));
 		}
 
 		public enum PenaltyType
@@ -216,81 +240,111 @@ namespace CSSPanel
 			Silence,
 		}
 
-
-		public static string ConvertMinutesToTime(int minutes)
+		private static string ConvertMinutesToTime(int minutes)
 		{
-			TimeSpan time = TimeSpan.FromMinutes(minutes);
+			var time = TimeSpan.FromMinutes(minutes);
 
 			return time.Days > 0 ? $"{time.Days}d {time.Hours}h {time.Minutes}m" : time.Hours > 0 ? $"{time.Hours}h {time.Minutes}m" : $"{time.Minutes}m";
 		}
 
 		public static void SendDiscordPenaltyMessage(CCSPlayerController? caller, CCSPlayerController? target, string reason, int duration, PenaltyType penalty, DiscordWebhookClient? discordWebhookClientPenalty, IStringLocalizer? localizer)
 		{
-			if (discordWebhookClientPenalty != null && localizer != null)
+			if (discordWebhookClientPenalty == null || localizer == null) return;
+
+			var callerCommunityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl() + ">" : "<https://steamcommunity.com/profiles/0>";
+			var targetCommunityUrl = target != null ? "<" + new SteamID(target.SteamID).ToCommunityUrl() + ">" : "<https://steamcommunity.com/profiles/0>";
+			var callerName = caller != null ? caller.PlayerName : "Console";
+			var targetName = target != null ? target.PlayerName : localizer["sa_unknown"];
+			var targetSteamId = target != null ? new SteamID(target.SteamID).SteamId2 : localizer["sa_unknown"];
+
+			var time = duration != 0 ? ConvertMinutesToTime(duration) : localizer["sa_permanent"];
+
+			string[] fieldNames = [
+				localizer["sa_player"],
+				localizer["sa_steamid"],
+				localizer["sa_duration"],
+				localizer["sa_reason"],
+				localizer["sa_admin"]];
+			string[] fieldValues = [$"[{targetName}]({targetCommunityUrl})", targetSteamId, time, reason, $"[{callerName}]({callerCommunityUrl})"];
+			bool[] inlineFlags = [true, true, true, false, false];
+
+			var hostname = ConVar.Find("hostname")?.StringValue ?? localizer["sa_unknown"];
+
+			var embed = new EmbedBuilder
 			{
-				string callercommunityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				string targetcommunityUrl = target != null ? "<" + new SteamID(target.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-				string callerName = caller != null ? caller.PlayerName : "Console";
-				string targetName = target != null ? target.PlayerName : localizer?["sa_unknown"] ?? "Unknown";
-				string targetSteamId = target != null ? new SteamID(target.SteamID).SteamId2.ToString() : localizer?["sa_unknown"] ?? "Unknown";
-
-				string time = duration != 0 ? ConvertMinutesToTime(duration) : localizer?["sa_permanent"] ?? "Permanent";
-
-				string[] fieldNames = [
-					localizer?["sa_player"] ?? "Player:",
-					localizer?["sa_steamid"] ?? "SteamID:",
-					localizer?["sa_duration"] ?? "Duration:",
-					localizer?["sa_reason"] ?? "Reason:",
-					localizer?["sa_admin"] ?? "Admin:"];
-				string[] fieldValues = [$"[{targetName}]({targetcommunityUrl})", targetSteamId, time, reason, $"[{callerName}]({callercommunityUrl})"];
-				bool[] inlineFlags = [true, true, true, false, false];
-
-				string? hostname = ConVar.Find("hostname")!.StringValue ?? localizer?["sa_unknown"] ?? "Unknown";
-
-				var embed = new EmbedBuilder
+				Title = penalty switch
 				{
-					Title = penalty switch
-					{
-						PenaltyType.Ban => localizer?["sa_discord_penalty_ban"] ?? "Ban registrered",
-						PenaltyType.Mute => localizer?["sa_discord_penalty_mute"] ?? "Mute registrered",
-						PenaltyType.Gag => localizer?["sa_discord_penalty_gag"] ?? "Gag registrered",
-						PenaltyType.Silence => localizer?["sa_discord_penalty_silence"] ?? "Silence registrered",
-						_ => localizer?["sa_discord_penalty_unknown"] ?? "Unknown registrered",
-					},
+					PenaltyType.Ban => localizer["sa_discord_penalty_ban"],
+					PenaltyType.Mute => localizer["sa_discord_penalty_mute"],
+					PenaltyType.Gag => localizer["sa_discord_penalty_gag"],
+					PenaltyType.Silence => localizer["sa_discord_penalty_silence"],
+					_ => localizer["sa_discord_penalty_unknown"],
+				},
 
-					Color = penalty switch
-					{
-						PenaltyType.Ban => Color.Red,
-						PenaltyType.Mute => Color.Blue,
-						PenaltyType.Gag => Color.Gold,
-						PenaltyType.Silence => Color.Green,
-						_ => Color.Default,
-					},
-
-					Description = $"{hostname}",
-
-					Timestamp = DateTimeOffset.UtcNow
-				};
-
-				for (int i = 0; i < fieldNames.Length; i++)
+				Color = penalty switch
 				{
-					embed.AddField(fieldNames[i], fieldValues[i], inlineFlags[i]);
-				}
+					PenaltyType.Ban => Color.Red,
+					PenaltyType.Mute => Color.Blue,
+					PenaltyType.Gag => Color.Gold,
+					PenaltyType.Silence => Color.Green,
+					_ => Color.Default,
+				},
 
-				discordWebhookClientPenalty.SendMessageAsync(embeds: [embed.Build()]);
+				Description = $"{hostname}",
+
+				Timestamp = DateTimeOffset.UtcNow
+			};
+
+			for (var i = 0; i < fieldNames.Length; i++)
+			{
+				embed.AddField(fieldNames[i], fieldValues[i], inlineFlags[i]);
 			}
+
+			discordWebhookClientPenalty.SendMessageAsync(embeds: [embed.Build()]);
 		}
 
-		public static string GenerateMessageDiscord(string message)
+		private static string GenerateMessageDiscord(string message)
 		{
-			string? hostname = ConVar.Find("hostname")!.StringValue ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
-			string? address = $"{(Config?.DefaultServerIP != "" ? Config?.DefaultServerIP : ConVar.Find("ip")!.StringValue)}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
+			var hostname = ConVar.Find("hostname")?.StringValue ?? CSSPanel._localizer?["sa_unknown"] ?? "Unknown";
+			var address = $"{ConVar.Find("ip")?.StringValue}:{ConVar.Find("hostport")!.GetPrimitiveValue<int>()}";
 
 			message = message.Replace("HOSTNAME", hostname);
 			message = message.Replace("ADDRESS", address);
 
 			return message;
 		}
+
+		public static string[] SeparateLines(string message)
+		{
+			return message.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+		}
+
+		public static string GetServerIp()
+		{
+			var network_system = NativeAPI.GetValveInterface(0, "NetworkSystemVersion001");
+
+			unsafe
+			{
+				if (_networkSystemUpdatePublicIp == null)
+				{
+					var funcPtr = *(nint*)(*(nint*)(network_system) + 256);
+					_networkSystemUpdatePublicIp = Marshal.GetDelegateForFunctionPointer<CNetworkSystem_UpdatePublicIp>(funcPtr);
+				}
+				/*
+				struct netadr_t
+				{
+				   uint32_t type
+				   uint8_t ip[4]
+				   uint16_t port
+				}
+				*/
+				// + 4 to skip type, because the size of uint32_t is 4 bytes
+				var ipBytes = (byte*)(_networkSystemUpdatePublicIp(network_system) + 4);
+				// port is always 0, use the one from convar "hostport"
+				return $"{ipBytes[0]}.{ipBytes[1]}.{ipBytes[2]}.{ipBytes[3]}";
+			}
+		}
+
 
 		public static void UpdateConfig<T>(T config) where T : BasePluginConfig, new()
 		{
@@ -305,39 +359,42 @@ namespace CSSPanel
 			config.Version = newCfgVersion;
 
 			// serialize the updated config back to json
-			var updatedJsonContent = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+			var updatedJsonContent = JsonSerializer.Serialize(config,
+				new JsonSerializerOptions
+				{
+					WriteIndented = true,
+					Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+				});
 			File.WriteAllText(CfgPath, updatedJsonContent);
 		}
 
 		public static void TryLogCommandOnDiscord(CCSPlayerController? caller, string commandString)
 		{
-			if (CSSPanel._discordWebhookClientLog == null || CSSPanel._localizer == null)
+			if (CSSPanel.DiscordWebhookClientLog == null || CSSPanel._localizer == null)
 				return;
 
 			if (caller != null && caller.IsValid == false)
 				caller = null;
 
-			string callerName = caller == null ? "Console" : caller.PlayerName;
-			string communityUrl = caller != null ? "<" + new SteamID(caller.SteamID).ToCommunityUrl().ToString() + ">" : "<https://steamcommunity.com/profiles/0>";
-			CSSPanel._discordWebhookClientLog.SendMessageAsync(GenerateMessageDiscord(CSSPanel._localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})", commandString]));
-		}
-
-		public static string GetSteamProfileLink(string userId)
-		{
-			return $"https://steamcommunity.com/profiles/{userId}";
+			var callerName = caller == null ? "Console" : caller.PlayerName;
+			var communityUrl = caller != null
+				? "<" + new SteamID(caller.SteamID).ToCommunityUrl() + ">"
+				: "<https://steamcommunity.com/profiles/0>";
+			CSSPanel.DiscordWebhookClientLog.SendMessageAsync(GenerateMessageDiscord(
+				CSSPanel._localizer["sa_discord_log_command", $"[{callerName}]({communityUrl})",
+					commandString]));
 		}
 	}
 
-	public class SchemaString<SchemaClass> : NativeObject where SchemaClass : NativeObject
+	public class SchemaString<TSchemaClass>(TSchemaClass instance, string member)
+		: NativeObject(Schema.GetSchemaValue<nint>(instance.Handle, typeof(TSchemaClass).Name, member))
+		where TSchemaClass : NativeObject
 	{
-		public SchemaString(SchemaClass instance, string member) : base(Schema.GetSchemaValue<nint>(instance.Handle, typeof(SchemaClass).Name!, member))
-		{ }
-
 		public unsafe void Set(string str)
 		{
-			byte[] bytes = SchemaString<SchemaClass>.GetStringBytes(str);
+			var bytes = GetStringBytes(str);
 
-			for (int i = 0; i < bytes.Length; i++)
+			for (var i = 0; i < bytes.Length; i++)
 			{
 				Unsafe.Write((void*)(Handle.ToInt64() + i), bytes[i]);
 			}

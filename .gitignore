@@ -2,4 +2,5 @@ bin/
 obj/
 .vs/
 .git
-Build
+.vscode/
+.idea/

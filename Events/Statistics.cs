@@ -1,6 +1,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Entities;
 using Dapper;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,7 @@ public partial class CSSPanel
 		string ipAddress = player.IpAddress!.Split(":")[0];
 		string playerId = authorizedSteamID.SteamId64.ToString();
 		string playerName = player.PlayerName;
-		AdminSQLManager _adminManager = new(_database);
+		PermissionManager _adminManager = new(_database);
 
 		// Unix timestamp
 		long Time = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -88,7 +89,7 @@ public partial class CSSPanel
 		string ipAddress = player.IpAddress!.Split(":")[0];
 		string playerId = authorizedSteamID.SteamId64.ToString();
 		string playerName = player.PlayerName;
-		AdminSQLManager _adminManager = new(_database);
+		PermissionManager _adminManager = new(_database);
 		DateTime now = DateTime.Now;
 
 		// Unix timestamp

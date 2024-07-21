@@ -1,31 +1,51 @@
 ﻿using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
-namespace CSSPanel
+namespace CSSPanel.Database;
+
+public class Database(string dbConnectionString)
 {
-	public class Database
+	public MySqlConnection GetConnection()
 	{
-		private readonly string _dbConnectionString;
-
-		public Database(string dbConnectionString)
+		try
 		{
-			_dbConnectionString = dbConnectionString;
+			var connection = new MySqlConnection(dbConnectionString);
+			connection.Open();
+			return connection;
 		}
-
-		public async Task<MySqlConnection> GetConnectionAsync()
+		catch (Exception ex)
 		{
-			try
-			{
-				var connection = new MySqlConnection(_dbConnectionString);
-				await connection.OpenAsync();
-				return connection;
-			}
-			catch (Exception ex)
-			{
-				if (CSSPanel._logger != null)
-					CSSPanel._logger.LogCritical($"Unable to connect to database: {ex.Message}");
-				throw;
-			}
+			CSSPanel._logger?.LogCritical($"Unable to connect to database: {ex.Message}");
+			throw;
+		}
+	}
+
+	public async Task<MySqlConnection> GetConnectionAsync()
+	{
+		try
+		{
+			var connection = new MySqlConnection(dbConnectionString);
+			await connection.OpenAsync();
+			return connection;
+		}
+		catch (Exception ex)
+		{
+			CSSPanel._logger?.LogCritical($"Unable to connect to database: {ex.Message}");
+			throw;
+		}
+	}
+
+	public bool CheckDatabaseConnection()
+	{
+		using var connection = GetConnection();
+
+		try
+		{
+			return connection.Ping();
+		}
+		catch
+		{
+			return false;
 		}
 	}
 }

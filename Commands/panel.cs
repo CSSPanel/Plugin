@@ -183,7 +183,7 @@ namespace CSSPanel
 			{
 				playersToTarget = playersToTarget.Where(player => player.UserId.ToString() == target.Replace("#", "")).ToList();
 			}
-			else if (Helper.IsValidSteamID64(target))
+			else if (Helper.IsValidSteamId64(target))
 			{
 				playersToTarget = playersToTarget.Where(player => player.SteamID.ToString() == target).ToList();
 			}

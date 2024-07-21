@@ -1,7 +1,5 @@
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
-using CounterStrikeSharp.API.Modules.Commands;
-using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
 
 namespace CSSPanel.Menus
@@ -10,401 +8,243 @@ namespace CSSPanel.Menus
 	{
 		public static void OpenMenu(CCSPlayerController admin)
 		{
-			if (admin == null || admin.IsValid == false)
+			if (admin.IsValid == false)
 				return;
 
+			var localizer = CSSPanel._localizer;
 			if (AdminManager.PlayerHasPermissions(admin, "@css/generic") == false)
 			{
-				// TODO: Localize
-				admin.PrintToChat("[Simple Admin] You do not have permissions to use this command.");
+				admin.PrintToChat(localizer?["sa_prefix"] ??
+				                  "[SimpleAdmin] " + 
+				                  (localizer?["sa_no_permission"] ?? "You do not have permissions to use this command")
+				);
 				return;
 			}
 
-			BaseMenu menu = AdminMenu.CreateMenu("Manage Players");
-			List<ChatMenuOptionData> options = new();
+			var menu = AdminMenu.CreateMenu(localizer?["sa_menu_players_manage"] ?? "Manage Players");
+			List<ChatMenuOptionData> options = [];
 
 			// permissions
-			bool hasSlay = AdminManager.PlayerHasPermissions(admin, "@css/slay");
-			bool hasKick = AdminManager.PlayerHasPermissions(admin, "@css/kick");
-			bool hasBan = AdminManager.PlayerHasPermissions(admin, "@css/ban");
-			bool hasChat = AdminManager.PlayerHasPermissions(admin, "@css/chat");
+			var hasSlay = AdminManager.PlayerHasPermissions(admin, "@css/slay");
+			var hasKick = AdminManager.PlayerHasPermissions(admin, "@css/kick");
+			var hasBan = AdminManager.PlayerHasPermissions(admin, "@css/ban");
+			var hasChat = AdminManager.PlayerHasPermissions(admin, "@css/chat");
 
 			// TODO: Localize options
 			// options added in order
 
 			if (hasSlay)
 			{
-				options.Add(new ChatMenuOptionData("Slap", () => PlayersMenu.OpenMenu(admin, "Slap", SlapMenu)));
-				options.Add(new ChatMenuOptionData("Slay", () => PlayersMenu.OpenMenu(admin, "Slay", Slay)));
+				options.Add(new ChatMenuOptionData(localizer?["sa_slap"] ?? "Slap", () => PlayersMenu.OpenMenu(admin, localizer?["sa_slap"] ?? "Slap", SlapMenu)));
+				options.Add(new ChatMenuOptionData(localizer?["sa_slay"] ?? "Slay", () => PlayersMenu.OpenMenu(admin, localizer?["sa_slay"] ?? "Slay", Slay)));
 			}
 
 			if (hasKick)
-			{
-				options.Add(new ChatMenuOptionData("Kick", () => PlayersMenu.OpenMenu(admin, "Kick", KickMenu)));
-			}
+				options.Add(new ChatMenuOptionData(localizer?["sa_kick"] ?? "Kick", () => PlayersMenu.OpenMenu(admin, localizer?["sa_kick"] ?? "Kick", KickMenu)));
 
 			if (hasBan)
-			{
-				options.Add(new ChatMenuOptionData("Ban", () => PlayersMenu.OpenRealPlayersMenu(admin, "Ban", (admin, player) => DurationMenu.OpenMenu(admin, $"Ban: {player.PlayerName}", player, BanMenu))));
-			}
+				options.Add(new ChatMenuOptionData(localizer?["sa_ban"] ?? "Ban", () => PlayersMenu.OpenRealPlayersMenu(admin, localizer?["sa_ban"] ?? "Ban", (admin, player) => DurationMenu.OpenMenu(admin, $"{localizer?["sa_ban"] ?? "Ban"}: {player.PlayerName}", player, BanMenu))));
 
 			if (hasChat)
 			{
-				options.Add(new ChatMenuOptionData("Gag", () => PlayersMenu.OpenRealPlayersMenu(admin, "Gag", (admin, player) => DurationMenu.OpenMenu(admin, $"Gag: {player.PlayerName}", player, GagMenu))));
-				options.Add(new ChatMenuOptionData("Mute", () => PlayersMenu.OpenRealPlayersMenu(admin, "Mute", (admin, player) => DurationMenu.OpenMenu(admin, $"Mute: {player.PlayerName}", player, MuteMenu))));
-				options.Add(new ChatMenuOptionData("Silence", () => PlayersMenu.OpenRealPlayersMenu(admin, "Silence", (admin, player) => DurationMenu.OpenMenu(admin, $"Silence: {player.PlayerName}", player, SilenceMenu))));
+				options.Add(new ChatMenuOptionData(localizer?["sa_gag"] ?? "Gag", () => PlayersMenu.OpenRealPlayersMenu(admin, localizer?["sa_gag"] ?? "Gag", (admin, player) => DurationMenu.OpenMenu(admin, $"{localizer?["sa_gag"] ?? "Gag"}: {player.PlayerName}", player, GagMenu))));
+				options.Add(new ChatMenuOptionData(localizer?["sa_mute"] ?? "Mute", () => PlayersMenu.OpenRealPlayersMenu(admin, localizer?["sa_mute"] ?? "Mute", (admin, player) => DurationMenu.OpenMenu(admin, $"{localizer?["sa_mute"] ?? "Mute"}: {player.PlayerName}", player, MuteMenu))));
+				options.Add(new ChatMenuOptionData(localizer?["sa_silence"] ?? "Silence", () => PlayersMenu.OpenRealPlayersMenu(admin, localizer?["sa_silence"] ?? "Silence", (admin, player) => DurationMenu.OpenMenu(admin, $"{localizer?["sa_silence"] ?? "Silence"}: {player.PlayerName}", player, SilenceMenu))));
 			}
 
 			if (hasKick)
+				options.Add(new ChatMenuOptionData(localizer?["sa_team_force"] ?? "Force Team", () => PlayersMenu.OpenMenu(admin, localizer?["sa_team_force"] ?? "Force Team", ForceTeamMenu)));
+
+			foreach (var menuOptionData in options)
 			{
-				options.Add(new ChatMenuOptionData("Force Team", () => PlayersMenu.OpenMenu(admin, "Force Team", ForceTeamMenu)));
-			}
-
-			foreach (ChatMenuOptionData menuOptionData in options)
-			{
-				string menuName = menuOptionData.name;
-				menu.AddMenuOption(menuName, (_, _) => { menuOptionData.action?.Invoke(); }, menuOptionData.disabled);
-			}
-
-			AdminMenu.OpenMenu(admin, menu);
-		}
-
-		private static void SlapMenu(CCSPlayerController admin, CCSPlayerController player)
-		{
-			BaseMenu menu = AdminMenu.CreateMenu($"Slap: {player.PlayerName}");
-			List<ChatMenuOptionData> options = new();
-
-			// options added in order
-			options.Add(new ChatMenuOptionData("0 hp", () => ApplySlapAndKeepMenu(admin, player, 0)));
-			options.Add(new ChatMenuOptionData("1 hp", () => ApplySlapAndKeepMenu(admin, player, 1)));
-			options.Add(new ChatMenuOptionData("5 hp", () => ApplySlapAndKeepMenu(admin, player, 5)));
-			options.Add(new ChatMenuOptionData("10 hp", () => ApplySlapAndKeepMenu(admin, player, 10)));
-			options.Add(new ChatMenuOptionData("50 hp", () => ApplySlapAndKeepMenu(admin, player, 50)));
-			options.Add(new ChatMenuOptionData("100 hp", () => ApplySlapAndKeepMenu(admin, player, 100)));
-
-			foreach (ChatMenuOptionData menuOptionData in options)
-			{
-				string menuName = menuOptionData.name;
-				menu.AddMenuOption(menuName, (_, _) => { menuOptionData.action?.Invoke(); }, menuOptionData.disabled);
+				var menuName = menuOptionData.Name;
+				menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
 			}
 
 			AdminMenu.OpenMenu(admin, menu);
 		}
 
-		private static void ApplySlapAndKeepMenu(CCSPlayerController admin, CCSPlayerController player, int damage)
+		private static void SlapMenu(CCSPlayerController admin, CCSPlayerController? player)
 		{
+			var menu = AdminMenu.CreateMenu($"{CSSPanel._localizer?["sa_slap"] ?? "Slap"}: {player?.PlayerName}");
+			List<ChatMenuOptionData> options =
+			[
+				// options added in order
+				new ChatMenuOptionData("0 hp", () => ApplySlapAndKeepMenu(admin, player, 0)),
+				new ChatMenuOptionData("1 hp", () => ApplySlapAndKeepMenu(admin, player, 1)),
+				new ChatMenuOptionData("5 hp", () => ApplySlapAndKeepMenu(admin, player, 5)),
+				new ChatMenuOptionData("10 hp", () => ApplySlapAndKeepMenu(admin, player, 10)),
+				new ChatMenuOptionData("50 hp", () => ApplySlapAndKeepMenu(admin, player, 50)),
+				new ChatMenuOptionData("100 hp", () => ApplySlapAndKeepMenu(admin, player, 100)),
+			];
+
+			foreach (var menuOptionData in options)
+			{
+				var menuName = menuOptionData.Name;
+				menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
+			}
+
+			AdminMenu.OpenMenu(admin, menu);
+		}
+
+		private static void ApplySlapAndKeepMenu(CCSPlayerController admin, CCSPlayerController? player, int damage)
+		{
+			if (player is not { IsValid: true }) return;
+			
 			CSSPanel.Instance.Slap(admin, player, damage);
 			SlapMenu(admin, player);
 		}
 
-		private static void Slay(CCSPlayerController admin, CCSPlayerController player)
+		private static void Slay(CCSPlayerController admin, CCSPlayerController? player)
 		{
+			if (player is not { IsValid: true }) return;
+			
 			CSSPanel.Instance.Slay(admin, player);
 		}
 
-        private static Dictionary<CCSPlayerController, Action<string>> customReasonCallbacks = new Dictionary<CCSPlayerController, Action<string>>();
-        public static HookResult Listener_Say(CCSPlayerController? player, CommandInfo commandinfo)
-        {
-            if (player == null) return HookResult.Continue;
-
-            var message = commandinfo.ArgString;
-
-            if (customReasonCallbacks.TryGetValue(player, out var callback))
-            {
-                callback(message);
-
-                customReasonCallbacks.Remove(player);
-            }
-
-            return HookResult.Continue;
-        }
-        private static void KickMenu(CCSPlayerController admin, CCSPlayerController player)
-        {
-            BaseMenu menu = AdminMenu.CreateMenu($"Kick: {player.PlayerName}");
-            List<string> options = new()
-            {
-				"Custom Reason",
-                "Voice Abuse",
-                "Chat Abuse",
-                "Admin disrespect",
-                "Other"
-            };
-
-            foreach (string option in options)
-            {
-                if (option == "Custom Reason")
-                {
-                    menu.AddMenuOption(option, (_, _) =>
-                    {
-                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
-
-                        customReasonCallbacks[admin] = (customReason) =>
-                        {
-                            if (customReason.ToLower().Contains("cancel"))
-                            {
-                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
-                            }
-                            else
-                            {
-                                customReason = customReason.Replace("\"", "");
-                                Kick(admin, player, customReason);
-                            }
-
-                            customReasonCallbacks.Remove(player);
-                        };
-                    });
-                }
-                else
-                {
-                    menu.AddMenuOption(option, (_, _) => { Kick(admin, player, option); });
-                }
-            }
-
-            AdminMenu.OpenMenu(admin, menu);
-        }
-
-        private static void Kick(CCSPlayerController admin, CCSPlayerController player, string reason)
-        {
-            CSSPanel.Instance.Kick(admin, player, reason);
-        }
-
-        private static void BanMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
+		private static void KickMenu(CCSPlayerController admin, CCSPlayerController? player)
 		{
-			BaseMenu menu = AdminMenu.CreateMenu($"Ban: {player.PlayerName}");
-			List<string> options = new()
+			var menu = AdminMenu.CreateMenu($"{CSSPanel._localizer?["sa_kick"] ?? "Kick"}: {player?.PlayerName}");
+
+			foreach (var option in CSSPanel.Instance.Config.MenuConfigs.KickReasons)
 			{
-                "Custom Reason",
-                "Hacking",
-				"Voice Abuse",
-				"Chat Abuse",
-				"Admin disrespect",
-				"Other"
-			};
-
-            foreach (string option in options)
-            {
-                if (option == "Custom Reason")
-                {
-                    menu.AddMenuOption(option, (_, _) =>
-                    {
-                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
-
-                        customReasonCallbacks[admin] = (customReason) =>
-                        {
-                            if (customReason.ToLower().Contains("cancel"))
-                            {
-                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
-                            }
-                            else
-                            {
-                                customReason = customReason.Replace("\"", "");
-                                Ban(admin, player, duration, customReason);
-                            }
-
-                            customReasonCallbacks.Remove(player);
-                        };
-
-                    });
-                }
-                else
-                {
-                    menu.AddMenuOption(option, (_, _) => { Ban(admin, player, duration, option); });
-                }
-            }
-
-            AdminMenu.OpenMenu(admin, menu);
-        }
-
-        private static void Ban(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-        {
-            CSSPanel.Instance.Ban(admin, player, duration, reason);
-        }
-
-        private static void GagMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
-		{
-			// TODO: Localize and make options in config?
-			BaseMenu menu = AdminMenu.CreateMenu($"Gag: {player.PlayerName}");
-			List<string> options = new()
-			{
-                "Custom Reason",
-                "Advertising",
-				"Spamming",
-				"Spectator camera abuse",
-				"Hate",
-				"Admin disrespect",
-				"Other"
-			};
-
-            foreach (string option in options)
-            {
-                if (option == "Custom Reason")
-                {
-                    menu.AddMenuOption(option, (_, _) =>
-                    {
-                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
-
-                        customReasonCallbacks[admin] = (customReason) =>
-                        {
-                            if (customReason.ToLower().Contains("cancel"))
-                            {
-                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
-                            }
-                            else
-                            {
-                                customReason = customReason.Replace("\"", "");
-                                Gag(admin, player, duration, customReason);
-                            }
-
-                            customReasonCallbacks.Remove(player);
-                        };
-                    });
-                }
-                else
-                {
-                    menu.AddMenuOption(option, (_, _) => { Gag(admin, player, duration, option); });
-                }
-            }
-
-            AdminMenu.OpenMenu(admin, menu);
-        }
-
-        private static void Gag(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-        {
-            CSSPanel.Instance.Gag(admin, player, duration, reason);
-        }
-
-        private static void MuteMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
-		{
-			// TODO: Localize and make options in config?
-			BaseMenu menu = AdminMenu.CreateMenu($"Mute: {player.PlayerName}");
-			List<string> options = new()
-			{
-                "Custom Reason",
-                "Shouting",
-				"Playing music",
-				"Advertising",
-				"Spamming",
-				"Spectator camera abuse",
-				"Hate",
-				"Admin disrespect",
-				"Other"
-			};
-
-            foreach (string option in options)
-            {
-                if (option == "Custom Reason")
-                {
-                    menu.AddMenuOption(option, (_, _) =>
-                    {
-                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
-
-                        customReasonCallbacks[admin] = (customReason) =>
-                        {
-                            if (customReason.ToLower().Contains("cancel"))
-                            {
-                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
-                            }
-                            else
-                            {
-                                customReason = customReason.Replace("\"", "");
-                                Mute(admin, player, duration, customReason);
-                            }
-
-                            customReasonCallbacks.Remove(player);
-                        };
-                    });
-                }
-                else
-                {
-                    menu.AddMenuOption(option, (_, _) => { Mute(admin, player, duration, option); });
-                }
-            }
-
-            AdminMenu.OpenMenu(admin, menu);
-        }
-
-        private static void Mute(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-        {
-            CSSPanel.Instance.Mute(admin, player, duration, reason);
-        }
-
-        private static void SilenceMenu(CCSPlayerController admin, CCSPlayerController player, int duration)
-		{
-			// TODO: Localize and make options in config?
-			BaseMenu menu = AdminMenu.CreateMenu($"Silence: {player.PlayerName}");
-			List<string> options = new()
-			{
-                "Custom Reason",
-                "Shouting",
-				"Playing music",
-				"Advertising",
-				"Spamming",
-				"Spectator camera abuse",
-				"Hate",
-				"Admin disrespect",
-				"Other"
-			};
-
-            foreach (string option in options)
-            {
-                if (option == "Custom Reason")
-                {
-                    menu.AddMenuOption(option, (_, _) =>
-                    {
-                        admin.PrintToChat("[Simple Admin] You must write the reason for the sanction, or cancel to abort.");
-
-                        customReasonCallbacks[admin] = (customReason) =>
-                        {
-                            if (customReason.ToLower().Contains("cancel"))
-                            {
-                                admin.PrintToChat("[Simple Admin] The penalty has been cancelled.");
-                            }
-                            else
-                            {
-                                customReason = customReason.Replace("\"", "");
-                                Silence(admin, player, duration, customReason);
-                            }
-
-                            customReasonCallbacks.Remove(player);
-                        };
-
-                    });
-                }
-                else
-                {
-                    menu.AddMenuOption(option, (_, _) => { Silence(admin, player, duration, option); });
-                }
-            }
-
-            AdminMenu.OpenMenu(admin, menu);
-        }
-
-        private static void Silence(CCSPlayerController admin, CCSPlayerController player, int duration, string reason)
-        {
-            CSSPanel.Instance.Silence(admin, player, duration, reason);
-        }
-
-        private static void ForceTeamMenu(CCSPlayerController admin, CCSPlayerController player)
-		{
-			// TODO: Localize
-			BaseMenu menu = AdminMenu.CreateMenu($"Force {player.PlayerName}'s Team");
-			List<ChatMenuOptionData> options = new();
-			options.Add(new ChatMenuOptionData("CT", () => ForceTeam(admin, player, "ct", CsTeam.CounterTerrorist)));
-			options.Add(new ChatMenuOptionData("T", () => ForceTeam(admin, player, "t", CsTeam.Terrorist)));
-			options.Add(new ChatMenuOptionData("Swap", () => ForceTeam(admin, player, "swap", CsTeam.Spectator)));
-			options.Add(new ChatMenuOptionData("Spectator", () => ForceTeam(admin, player, "spec", CsTeam.Spectator)));
-
-			foreach (ChatMenuOptionData menuOptionData in options)
-			{
-				string menuName = menuOptionData.name;
-				menu.AddMenuOption(menuName, (_, _) => { menuOptionData.action?.Invoke(); }, menuOptionData.disabled);
+				menu.AddMenuOption(option, (_, _) =>
+				{
+					if (player is { IsValid: true })
+						Kick(admin, player, option);
+				});
 			}
 
 			AdminMenu.OpenMenu(admin, menu);
 		}
 
-		private static void ForceTeam(CCSPlayerController admin, CCSPlayerController player, string teamName, CsTeam teamNum)
+		private static void Kick(CCSPlayerController admin, CCSPlayerController? player, string? reason)
 		{
+			if (player is not { IsValid: true }) return;
+			
+			CSSPanel.Instance.Kick(admin, player, reason);
+		}
+
+		private static void BanMenu(CCSPlayerController admin, CCSPlayerController? player, int duration)
+		{
+			var menu = AdminMenu.CreateMenu($"{CSSPanel._localizer?["sa_ban"] ?? "Ban"}: {player?.PlayerName}");
+
+			foreach (var option in CSSPanel.Instance.Config.MenuConfigs.BanReasons)
+			{
+				menu.AddMenuOption(option, (_, _) =>
+				{
+					if (player is { IsValid: true })
+						Ban(admin, player, duration, option);
+				});
+			}
+
+			AdminMenu.OpenMenu(admin, menu);
+		}
+
+		private static void Ban(CCSPlayerController admin, CCSPlayerController? player, int duration, string reason)
+		{
+			if (player is not { IsValid: true }) return;
+				
+			CSSPanel.Instance.Ban(admin, player, duration, reason);
+		}
+
+		private static void GagMenu(CCSPlayerController admin, CCSPlayerController? player, int duration)
+		{
+			// TODO: Localize and make options in config?
+			var menu = AdminMenu.CreateMenu($"{CSSPanel._localizer?["sa_gag"] ?? "Gag"}: {player?.PlayerName}");
+
+			foreach (var option in CSSPanel.Instance.Config.MenuConfigs.MuteReasons)
+			{
+				menu.AddMenuOption(option, (_, _) =>
+				{
+					if (player is { IsValid: true })
+						Gag(admin, player, duration, option);
+				});
+			}
+
+			AdminMenu.OpenMenu(admin, menu);
+		}
+
+		private static void Gag(CCSPlayerController admin, CCSPlayerController? player, int duration, string reason)
+		{
+			if (player is not { IsValid: true }) return;
+			
+			CSSPanel.Gag(admin, player, duration, reason);
+		}
+
+		private static void MuteMenu(CCSPlayerController admin, CCSPlayerController? player, int duration)
+		{
+			// TODO: Localize and make options in config?
+			var menu = AdminMenu.CreateMenu($"{CSSPanel._localizer?["sa_mute"] ?? "Mute"}: {player?.PlayerName}");
+
+			foreach (var option in CSSPanel.Instance.Config.MenuConfigs.MuteReasons)
+			{
+				menu.AddMenuOption(option, (_, _) =>
+				{
+					if (player is { IsValid: true })
+						Mute(admin, player, duration, option);
+				});
+			}
+
+			AdminMenu.OpenMenu(admin, menu);
+		}
+
+		private static void Mute(CCSPlayerController admin, CCSPlayerController? player, int duration, string reason)
+		{
+			if (player is not { IsValid: true }) return;
+			
+			CSSPanel.Instance.Mute(admin, player, duration, reason);
+		}
+
+		private static void SilenceMenu(CCSPlayerController admin, CCSPlayerController? player, int duration)
+		{
+			// TODO: Localize and make options in config?
+			var menu = AdminMenu.CreateMenu($"{CSSPanel._localizer?["sa_silence"] ?? "Silence"}: {player?.PlayerName}");
+
+			foreach (var option in CSSPanel.Instance.Config.MenuConfigs.MuteReasons)
+			{
+				menu.AddMenuOption(option, (_, _) =>
+				{
+					if (player is { IsValid: true })
+						Silence(admin, player, duration, option);
+				});
+			}
+
+			AdminMenu.OpenMenu(admin, menu);
+		}
+
+		private static void Silence(CCSPlayerController admin, CCSPlayerController? player, int duration, string reason)
+		{
+			if (player is not { IsValid: true }) return;
+			
+			CSSPanel.Instance.Silence(admin, player, duration, reason);
+		}
+
+		private static void ForceTeamMenu(CCSPlayerController admin, CCSPlayerController? player)
+		{
+			// TODO: Localize
+			var menu = AdminMenu.CreateMenu($"{CSSPanel._localizer?["sa_team_force"] ?? "Force Team"} {player?.PlayerName}");
+			List<ChatMenuOptionData> options =
+			[
+				new ChatMenuOptionData(CSSPanel._localizer?["sa_team_ct"] ?? "CT", () => ForceTeam(admin, player, "ct", CsTeam.CounterTerrorist)),
+				new ChatMenuOptionData(CSSPanel._localizer?["sa_team_t"] ?? "T", () => ForceTeam(admin, player, "t", CsTeam.Terrorist)),
+				new ChatMenuOptionData(CSSPanel._localizer?["sa_team_swap"] ?? "Swap", () => ForceTeam(admin, player, "swap", CsTeam.Spectator)),
+				new ChatMenuOptionData(CSSPanel._localizer?["sa_team_spec"] ?? "Spec", () => ForceTeam(admin, player, "spec", CsTeam.Spectator)),
+			];
+
+			foreach (var menuOptionData in options)
+			{
+				var menuName = menuOptionData.Name;
+				menu.AddMenuOption(menuName, (_, _) => { menuOptionData.Action.Invoke(); }, menuOptionData.Disabled);
+			}
+
+			AdminMenu.OpenMenu(admin, menu);
+		}
+
+		private static void ForceTeam(CCSPlayerController admin, CCSPlayerController? player, string teamName, CsTeam teamNum)
+		{
+			if (player is not { IsValid: true }) return;
+			
 			CSSPanel.Instance.ChangeTeam(admin, player, teamName, teamNum, true);
 		}
 	}

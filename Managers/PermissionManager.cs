@@ -3,29 +3,17 @@ using Dapper;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 
 namespace CSSPanel;
 
-public class AdminSQLManager
+public class PermissionManager(Database.Database database)
 {
-	private readonly Database _database;
-
-	// Unused for now
-	//public static readonly ConcurrentDictionary<string, ConcurrentBag<string>> _adminCache = new ConcurrentDictionary<string, ConcurrentBag<string>>();
-	public static readonly ConcurrentDictionary<SteamID, DateTime?> _adminCache = new ConcurrentDictionary<SteamID, DateTime?>();
-
-	//public static readonly ConcurrentDictionary<SteamID, DateTime?> _adminCacheTimestamps = new ConcurrentDictionary<SteamID, DateTime?>();
-
-	public AdminSQLManager(Database database)
-	{
-		_database = database;
-	}
+	public static readonly ConcurrentDictionary<SteamID, DateTime?> AdminCache = new();
 
 	// Get the relevant server groups from the sa_servers_groups table by searching if the serverId is in the servers set column
 	public async Task<List<string>> GetServerGroups()
 	{
-		await using MySqlConnection connection = await _database.GetConnectionAsync();
+		await using MySqlConnection connection = await database.GetConnectionAsync();
 
 		string sql = "SELECT id FROM sa_servers_groups WHERE FIND_IN_SET(@ServerId, servers)";
 		List<dynamic>? serverGroups = (await connection.QueryAsync(sql, new { ServerId = CSSPanel.ServerId }))?.ToList();
@@ -71,7 +59,7 @@ public class AdminSQLManager
 	{
 		DateTime now = DateTime.UtcNow.ToLocalTime();
 
-		await using MySqlConnection connection = await _database.GetConnectionAsync();
+		await using MySqlConnection connection = await database.GetConnectionAsync();
 
 		// string sql = "SELECT flags, immunity, ends FROM sa_admins WHERE player_steamid = @PlayerSteamID AND (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
 		// string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
@@ -131,7 +119,7 @@ public class AdminSQLManager
 
 		try
 		{
-			await using MySqlConnection connection = await _database.GetConnectionAsync();
+			await using MySqlConnection connection = await database.GetConnectionAsync();
 
 			// string sql = "SELECT player_steamid, flags, immunity, ends FROM sa_admins WHERE (ends IS NULL OR ends > @CurrentTime) AND (server_id IS NULL OR FIND_IN_SET(@serverid, server_id) > 0)";
 			List<string> serverGroups = await GetServerGroups();
@@ -235,9 +223,9 @@ public class AdminSQLManager
 
 			if (!string.IsNullOrEmpty(steamIdStr) && SteamID.TryParse(steamIdStr, out var steamId) && steamId != null)
 			{
-				if (!_adminCache.ContainsKey(steamId))
+				if (!AdminCache.ContainsKey(steamId))
 				{
-					_adminCache.TryAdd(steamId, ends);
+					AdminCache.TryAdd(steamId, ends);
 					//_adminCacheTimestamps.Add(steamId, ends);
 				}
 
@@ -254,7 +242,7 @@ public class AdminSQLManager
 
 		//_adminCache.TryRemove(playerSteamId, out _);
 
-		await using MySqlConnection connection = await _database.GetConnectionAsync();
+		await using MySqlConnection connection = await database.GetConnectionAsync();
 
 		string sql = "";
 
@@ -270,11 +258,11 @@ public class AdminSQLManager
 		await connection.ExecuteAsync(sql, new { PlayerSteamID = playerSteamId, ServerId = CSSPanel.ServerId });
 	}
 
-	public async Task AddAdminBySteamId(string playerSteamId, string playerName, string flags, int immunity = 0, int time = 0, bool globalAdmin = false)
+	public async Task AddAdminBySteamId(string playerSteamId, string playerName, List<string> flagsList, int immunity = 0, int time = 0, bool globalAdmin = false)
 	{
-		if (string.IsNullOrEmpty(playerSteamId)) return;
+		if (string.IsNullOrEmpty(playerSteamId) || flagsList.Count == 0) return;
 
-		flags = flags.Replace(" ", "");
+		string flags = string.Join(",", flagsList);
 
 		DateTime now = DateTime.UtcNow.ToLocalTime();
 		DateTime? futureTime;
@@ -283,7 +271,7 @@ public class AdminSQLManager
 		else
 			futureTime = null;
 
-		await using MySqlConnection connection = await _database.GetConnectionAsync();
+		await using MySqlConnection connection = await database.GetConnectionAsync();
 
 		var sql = "INSERT INTO `sa_admins` (`player_steamid`, `player_name`, `flags`, `immunity`, `ends`, `created`, `server_id`) " +
 			"VALUES (@playerSteamid, @playerName, @flags, @immunity, @ends, @created, @serverid)";
@@ -306,7 +294,7 @@ public class AdminSQLManager
 	{
 		try
 		{
-			await using MySqlConnection connection = await _database.GetConnectionAsync();
+			await using MySqlConnection connection = await database.GetConnectionAsync();
 
 			string sql = "DELETE FROM sa_admins WHERE ends IS NOT NULL AND ends <= @CurrentTime";
 			await connection.ExecuteAsync(sql, new { CurrentTime = DateTime.Now.ToLocalTime() });
