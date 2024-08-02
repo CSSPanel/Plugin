@@ -33,13 +33,13 @@ namespace CSSPanel.Menus
 			if (AdminManager.PlayerHasPermissions(admin, "@css/generic") == false)
 			{
 				admin.PrintToChat(localizer?["sa_prefix"] ??
-				                  "[SimpleAdmin] " + 
+				                  "[Admin] " + 
 				                  (localizer?["sa_no_permission"] ?? "You do not have permissions to use this command")
 				                  );
 				return;
 			}
 
-			var menu = CreateMenu(localizer?["sa_title"] ?? "SimpleAdmin");
+			var menu = CreateMenu(localizer?["sa_title"] ?? "Admin");
 			List<ChatMenuOptionData> options =
 			[
 				new ChatMenuOptionData(localizer?["sa_menu_players_manage"] ?? "Players Manage", () => ManagePlayersMenu.OpenMenu(admin)),
