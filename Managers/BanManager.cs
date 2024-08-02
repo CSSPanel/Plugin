@@ -173,7 +173,17 @@ internal class BanManager(Database.Database database, CSSPanelConfig config)
 					duration = duration < 0 ? 0 : duration;
 					Console.WriteLine($"Duration: {duration}");
 
-					await BanPlayer(player, new PlayerInfo { SteamId = "Console" }, $"Duplicate Account {player_steamid}", duration);
+					// Check if the player is already banned
+					sql = config.MultiServerMode ? "SELECT COUNT(*) FROM sa_bans WHERE player_steamid = @PlayerSteamID AND status = 'ACTIVE'" : "SELECT COUNT(*) FROM sa_bans WHERE player_steamid = @PlayerSteamID AND status = 'ACTIVE' AND server_id = @serverid";
+
+					int playerCount = await connection.ExecuteScalarAsync<int>(sql, parameters);
+					Console.WriteLine($"PlayerCount: {playerCount}");
+
+					// If the player is not banned, create a new ban record
+					if (playerCount == 0)
+					{
+						await BanPlayer(player, new PlayerInfo { SteamId = "Console" }, $"Duplicate Account {player_steamid}", duration);
+					}
 				}
 			}
 		}
