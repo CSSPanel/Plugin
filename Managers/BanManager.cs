@@ -182,7 +182,7 @@ internal class BanManager(Database.Database database, CSSPanelConfig config)
 					// If the player is not banned, create a new ban record
 					if (playerCount == 0)
 					{
-						await BanPlayer(player, new PlayerInfo { SteamId = "Console" }, $"Duplicate Account {player_steamid}", duration);
+						await BanPlayer(player, new PlayerInfo { SteamId = "Console" }, $"Duplicate Account {player_steamid} {playerCount}", duration);
 					}
 				}
 			}
