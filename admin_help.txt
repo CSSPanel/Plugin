@@ -11,6 +11,9 @@
 {DARKRED}- css_unmute <steamid or name> - {GREEN}Ungag player
 {DARKRED}- css_mute <#userid or name> [time in minutes/0 perm] [reason] - {GREEN}Mute player
 {DARKRED}- css_addmute <steamid> [time in minutes/0 perm] [reason] - {GREEN}Mute player via steamid64
+{DARKRED}- css_silence <#userid or name> [time in minutes/0 perm] [reason] - {GREEN}Silence player
+{DARKRED}- css_addsilence <steamid> [time in minutes/0 perm] [reason] - {GREEN}Silence player via steamid64
+{DARKRED}- css_unsilence <steamid or name> - {GREEN}Unsilence player
 {DARKRED}- css_give <#userid or name> <weapon> - {GREEN}Give player a weapon
 {DARKRED}- css_strip <#userid or name> <weapon> - {GREEN}Takes all of the player weapons
 {DARKRED}- css_hp <#userid or name> [health] - {GREEN}Set player health
@@ -31,6 +34,7 @@
 {DARKRED}- css_noclip <#userid or name> - {GREEN}Toggle noclip for player
 {DARKRED}- css_freeze <#userid or name> [duration] - {GREEN}Freeze player
 {DARKRED}- css_unfreeze <#userid or name> - {GREEN}Unfreeze player
+{DARKRED}- css_rename <#userid or name> <new name> - {GREEN}Rename player
 {DARKRED}- css_respawn <#userid or name> - {GREEN}Respawn player
 {DARKRED}- css_cvar <cvar> <value> - {GREEN}Change cvar value
 {DARKRED}- css_rcon <command> - {GREEN}Run command as server
