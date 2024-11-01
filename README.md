@@ -1,5 +1,8 @@
 # CSS Panel - CS2 Plugin
 
+NOTE: this plugin is deprecated and should not be used as its not updated and sync with the latest SimpleAdmin versions.
+instead, you should use [@Cruze03](https://github.com/Cruze03/CS2-SimpleAdmin) version as it gets updated more frequently and supports the panel.
+
 The plugin is forked and based on [daffyyyy/CS2-SimpleAdmin](https://github.com/daffyyyy/CS2-SimpleAdmin), included with some additional features and commands for the CSS-Panel web app.
 Thanks a lot to [daffyyyy](https://github.com/daffyyyy) for the original plugin, we just added some features and commands to make it work with the CSS-Panel.
 
